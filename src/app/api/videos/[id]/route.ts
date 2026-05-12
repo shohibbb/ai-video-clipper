@@ -66,6 +66,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
         platform: target.platform,
         uploadStatus: target.uploadStatus,
         uploadedUrl: target.uploadedUrl,
+        platformResponse: target.platformResponse,
         errorMessage: target.errorMessage,
       })),
     })),

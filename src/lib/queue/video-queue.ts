@@ -24,12 +24,6 @@ type VideoJobInput = {
   sourceStoragePath?: string | null;
 };
 
-type UploadJobInput = {
-  userId: string;
-  clipId: string;
-  uploadTargetId: string;
-};
-
 const videoProcessingJobOptions = {
   attempts: OPUSCLIP_MAX_ATTEMPTS,
   backoff: {
@@ -157,31 +151,4 @@ export async function enqueueVideoProcessingJob({
 
     throw error;
   }
-}
-
-export async function enqueueClipUploadJob({ userId, clipId, uploadTargetId }: UploadJobInput) {
-  const job = await prisma.job.create({
-    data: {
-      userId,
-      clipId,
-      jobType: "upload_tiktok",
-      status: "queued",
-    },
-  });
-
-  await prisma.log.create({
-    data: {
-      userId,
-      jobId: job.id,
-      level: "info",
-      message: "Placeholder TikTok upload job created. Composio execution is not wired yet.",
-      metadata: {
-        phase: 2,
-        clipId,
-        uploadTargetId,
-      },
-    },
-  });
-
-  return job;
 }

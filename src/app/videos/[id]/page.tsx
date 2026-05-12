@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { ClipMetadataEditor } from "@/components/clip-metadata-editor";
 import { ClipPreview } from "@/components/clip-preview";
+import { ClipUploadPanel } from "@/components/clip-upload-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,9 @@ type ClipWithPreview = {
     id: string;
     platform: string;
     uploadStatus: string;
+    uploadedUrl: string | null;
+    errorMessage: string | null;
+    createdAt: string;
   }[];
 };
 
@@ -124,6 +128,9 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
           id: target.id,
           platform: target.platform,
           uploadStatus: target.uploadStatus,
+          uploadedUrl: target.uploadedUrl,
+          errorMessage: target.errorMessage,
+          createdAt: target.createdAt.toISOString(),
         })),
       };
     }),
@@ -186,7 +193,7 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
               </h2>
             </div>
             <p className="max-w-md text-sm leading-6 text-[color:var(--muted)]">
-              TikTok upload stays disabled for this phase. Use this pass to prepare titles, captions, and hashtags.
+              Prepare metadata, then queue TikTok upload through the dedicated Composio worker.
             </p>
           </div>
 
@@ -224,6 +231,8 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
                         hashtags: clip.hashtags,
                       }}
                     />
+
+                    <ClipUploadPanel clipId={clip.id} storagePath={clip.storagePath} uploadTargets={clip.uploadTargets} />
                   </div>
                 </article>
               ))

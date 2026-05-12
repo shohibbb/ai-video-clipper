@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCurrentUser } from "@/lib/auth";
-import { enqueueClipUploadJob } from "@/lib/queue/video-queue";
+import { enqueueClipUploadJob } from "@/lib/queue/upload-queue";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
@@ -32,6 +32,35 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ error: "Clip not found." }, { status: 404 });
   }
 
+  if (!clip.storagePath) {
+    return NextResponse.json({ error: "Clip must have a storage path before it can be uploaded to TikTok." }, { status: 400 });
+  }
+
+  const activeUpload = await prisma.uploadTarget.findFirst({
+    where: {
+      clipId: clip.id,
+      userId: user.id,
+      platform,
+      uploadStatus: {
+        in: ["queued", "uploading"],
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  if (activeUpload) {
+    return NextResponse.json(
+      {
+        error: "This clip already has a TikTok upload queued or in progress.",
+        uploadTargetId: activeUpload.id,
+        status: activeUpload.uploadStatus,
+      },
+      { status: 409 },
+    );
+  }
+
   const uploadTarget = await prisma.uploadTarget.create({
     data: {
       clipId: clip.id,
@@ -41,26 +70,45 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     },
   });
 
-  await prisma.clip.update({
-    where: {
-      id: clip.id,
-    },
-    data: {
-      status: "uploading",
-    },
-  });
+  try {
+    await prisma.clip.update({
+      where: {
+        id: clip.id,
+      },
+      data: {
+        status: "uploading",
+      },
+    });
 
-  await enqueueClipUploadJob({
-    userId: user.id,
-    clipId: clip.id,
-    uploadTargetId: uploadTarget.id,
-  });
-
-  return NextResponse.json(
-    {
+    const job = await enqueueClipUploadJob({
+      userId: user.id,
+      clipId: clip.id,
       uploadTargetId: uploadTarget.id,
-      status: uploadTarget.uploadStatus,
-    },
-    { status: 201 },
-  );
+    });
+
+    return NextResponse.json(
+      {
+        uploadTargetId: uploadTarget.id,
+        jobId: job.id,
+        status: uploadTarget.uploadStatus,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    await prisma.clip.update({
+      where: {
+        id: clip.id,
+      },
+      data: {
+        status: "ready_to_upload",
+      },
+    });
+
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unable to enqueue TikTok upload.",
+      },
+      { status: 503 },
+    );
+  }
 }

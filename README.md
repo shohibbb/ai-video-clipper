@@ -2,7 +2,7 @@
 
 MVP web application for submitting source videos, tracking OpusClip processing tasks, reviewing generated clips, and preparing TikTok uploads through Composio.
 
-This repository is currently in **Phase 1**:
+This repository is currently through **Phase 6**:
 
 - Next.js App Router scaffold
 - TypeScript configuration
@@ -11,8 +11,11 @@ This repository is currently in **Phase 1**:
 - Database-backed API route skeletons
 - Basic dashboard, video, and integration pages
 - Placeholder service boundaries for queue, storage, OpusClip automation, and Composio upload
+- BullMQ workers for OpusClip processing and TikTok upload
+- Supabase-backed storage abstraction for source videos and clips
+- Composio TikTok upload service boundary
 
-Real Playwright automation, Redis/BullMQ workers, storage upload, and Composio execution are intentionally not implemented yet.
+Real OpusClip selectors still need to be filled in manually. TikTok upload is wired through Composio, but requires valid Composio/TikTok configuration before it can run successfully.
 
 ## Requirements
 
@@ -65,13 +68,19 @@ Real Playwright automation, Redis/BullMQ workers, storage upload, and Composio e
    npm run dev
    ```
 
-9. In a second terminal, start the worker:
+9. In a second terminal, start the OpusClip worker:
 
    ```bash
    npm run worker:opusclip
    ```
 
-10. Open `http://localhost:3000/dashboard`.
+10. In another terminal, start the TikTok upload worker when testing uploads:
+
+   ```bash
+   npm run worker:upload
+   ```
+
+11. Open `http://localhost:3000/dashboard`.
 
 ## OpusClip Session Setup
 
@@ -107,6 +116,33 @@ Phase 4 adds the Playwright skeleton only. It does not contain production-ready 
 
 Failure artifacts are written under `OPUSCLIP_ARTIFACTS_DIR` and include a screenshot when a page is available plus a JSON error file with the current URL.
 
+## Composio TikTok Setup
+
+Phase 6 adds the TikTok-only Composio upload path. It does not add YouTube or Instagram upload.
+
+1. Create or configure a Composio TikTok connection in your Composio account.
+
+2. Set server-side environment variables:
+
+   ```bash
+   COMPOSIO_API_KEY=
+   COMPOSIO_TIKTOK_CONNECTED_ACCOUNT_ID=
+   COMPOSIO_TIKTOK_UPLOAD_ACTION=TIKTOK_UPLOAD_VIDEO
+   COMPOSIO_TOOLKIT_VERSION_TIKTOK=
+   COMPOSIO_TIKTOK_PUBLISH=false
+   COMPOSIO_TIKTOK_PRIVACY_LEVEL=SELF_ONLY
+   ```
+
+3. Keep `COMPOSIO_TIKTOK_PUBLISH=false` while testing if you only want to verify upload staging. Set it to `true` only when you are ready for Composio/TikTok to attempt publishing.
+
+4. Run the upload worker:
+
+   ```bash
+   npm run worker:upload
+   ```
+
+The worker creates a signed URL for the private clip file, stages it with `composio.files.upload`, then executes `TIKTOK_UPLOAD_VIDEO` with caption metadata. If `COMPOSIO_API_KEY` is missing, the upload job fails cleanly and stores the error in `upload_targets` and `logs`.
+
 ## Useful Commands
 
 ```bash
@@ -114,6 +150,7 @@ npm run typecheck
 npm run build
 npm run prisma:studio
 npm run worker:opusclip
+npm run worker:upload
 npm run opusclip:login
 npm run playwright:install
 ```
@@ -128,7 +165,9 @@ npm run playwright:install
 - Real OpusClip selectors are TODO in `src/lib/opusclip/selectors.ts`; keep the `OPUSCLIP_ENABLE_REAL_*` flags disabled until those selectors are implemented and tested manually.
 - `/videos/:id` now shows clip previews and editable title, caption, and hashtag metadata when clip rows exist.
 - `POST /api/clips/:id/generate-caption` uses a safe placeholder caption service. If `OPENAI_API_KEY` is missing, it returns and stores a clear placeholder response instead of calling an external API.
-- `POST /api/clips/:id/upload` queues a TikTok-only placeholder upload job.
+- `POST /api/clips/:id/upload` validates the clip storage path, creates an `UploadTarget`, and queues a TikTok upload job.
+- `npm run worker:upload` starts the dedicated Composio TikTok upload worker with default concurrency `1`.
+- The upload worker retries failed TikTok uploads up to 3 attempts with a 5 minute fixed delay.
 - API handlers do not run long-lived automation work.
 - Playwright automation belongs in worker/service modules and is not production-ready yet.
 - Composio credentials must stay server-side and must not be exposed to the frontend.
