@@ -14,10 +14,17 @@ export function ClipPreview({
   previewError?: string | null;
 }) {
   return (
-    <div className="overflow-hidden rounded-[1.75rem] border border-[color:var(--line)] bg-[color:var(--ink)] text-[#fffaf0] shadow-[0_24px_70px_rgba(30,26,21,0.18)]">
-      <div className="relative aspect-[9/16] min-h-[26rem] bg-[radial-gradient(circle_at_30%_20%,rgba(232,85,47,0.35),transparent_32%),linear-gradient(160deg,#1e1a15,#273746)]">
+    <div className="w-full max-w-[13rem] self-start justify-self-center overflow-hidden rounded-[1.75rem] border border-[color:var(--line)] bg-[color:var(--ink)] text-[#fffaf0] shadow-[0_24px_70px_rgba(30,26,21,0.18)] lg:justify-self-start">
+      <div className="relative aspect-[9/16] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(232,85,47,0.35),transparent_32%),linear-gradient(160deg,#1e1a15,#273746)]">
         {previewUrl ? (
-          <video src={previewUrl} controls className="h-full w-full object-cover" aria-label={title ?? "Clip preview"} />
+          <video
+            src={previewUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 h-full w-full object-cover object-center"
+            aria-label={title ?? "Clip preview"}
+          />
         ) : (
           <div className="flex h-full flex-col justify-between p-5">
             <div className="flex justify-end">

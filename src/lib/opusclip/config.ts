@@ -12,6 +12,7 @@ export type OpusClipConfig = {
   downloadsDir: string;
   headless: boolean;
   selectorTimeoutMs: number;
+  submitTimeoutMs: number;
   processingTimeoutMs: number;
   processingPollMs: number;
   downloadTimeoutMs: number;
@@ -36,6 +37,7 @@ export function getOpusClipConfig(): OpusClipConfig {
     downloadsDir: resolve(process.env.OPUSCLIP_DOWNLOADS_DIR ?? "./downloads/opusclip"),
     headless: process.env.OPUSCLIP_HEADLESS !== "false",
     selectorTimeoutMs: getNumberEnv("OPUSCLIP_SELECTOR_TIMEOUT_MS", 5_000),
+    submitTimeoutMs: getNumberEnv("OPUSCLIP_SUBMIT_TIMEOUT_MS", 90_000),
     processingTimeoutMs: getNumberEnv("OPUSCLIP_PROCESSING_TIMEOUT_MS", 45 * 60 * 1000),
     processingPollMs: getNumberEnv("OPUSCLIP_PROCESSING_POLL_MS", 15_000),
     downloadTimeoutMs: getNumberEnv("OPUSCLIP_DOWNLOAD_TIMEOUT_MS", 120_000),

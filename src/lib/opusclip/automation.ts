@@ -24,6 +24,15 @@ type PreparedSource = {
   sourceUrl?: string | null;
 };
 
+type ProcessingWaitOptions = {
+  existingProjectPaths?: Set<string>;
+};
+
+type ProjectLinkCandidate = {
+  locator: Locator;
+  path: string;
+};
+
 function isEnabled(name: string) {
   return process.env[name] === "true";
 }
@@ -74,6 +83,153 @@ async function clickFirstVisible(candidates: Locator[], timeoutMs: number) {
   return true;
 }
 
+async function hasVisibleLocator(candidates: Locator[], timeoutMs: number) {
+  return Boolean(await firstVisibleLocator(candidates, timeoutMs));
+}
+
+async function isActionableButton(locator: Locator) {
+  if (!(await locator.isEnabled({ timeout: 500 }).catch(() => true))) {
+    return false;
+  }
+
+  return locator
+    .evaluate((node) => {
+      const element = node instanceof HTMLElement ? node : node.parentElement;
+      const target = element?.closest("button") ?? element;
+
+      if (!target) {
+        return false;
+      }
+
+      const button = target instanceof HTMLButtonElement ? target : null;
+      const styles = window.getComputedStyle(target);
+      return (
+        !button?.disabled &&
+        target.getAttribute("aria-disabled") !== "true" &&
+        styles.pointerEvents !== "none" &&
+        Number(styles.opacity) > 0.45
+      );
+    })
+    .catch(() => false);
+}
+
+function popupDismissLocators(page: Page) {
+  return [
+    page.getByRole("button", { name: /^close$/i }).first(),
+    page.getByRole("button", { name: /continue|got it|ok|done|maybe later|not now|skip/i }).first(),
+    page.locator('button[aria-label*="close" i]').first(),
+    page.locator('button:has-text("×"), button:has-text("x")').first(),
+  ];
+}
+
+function upgradePlanDialog(page: Page) {
+  return page.getByRole("dialog").filter({ hasText: /upgrade your plan|get starter|get pro|contact us/i }).first();
+}
+
+function upgradePlanIndicators(page: Page) {
+  return [page.getByText(/upgrade your plan/i).first(), upgradePlanDialog(page)];
+}
+
+async function hasUpgradePlanModal(page: Page, timeoutMs = 750) {
+  return hasVisibleLocator(upgradePlanIndicators(page), timeoutMs);
+}
+
+async function dismissUpgradePlanModal(page: Page) {
+  if (!(await hasUpgradePlanModal(page, 500))) {
+    return false;
+  }
+
+  await page.keyboard.press("Escape").catch(() => undefined);
+  await page.waitForTimeout(500);
+
+  if (!(await hasUpgradePlanModal(page, 500))) {
+    return true;
+  }
+
+  const dialog = upgradePlanDialog(page);
+  const explicitClose = dialog
+    .locator('button[aria-label*="close" i], [role="button"][aria-label*="close" i]')
+    .first();
+
+  if (await explicitClose.isVisible({ timeout: 500 }).catch(() => false)) {
+    await explicitClose.click({ timeout: 1_000 }).catch(() => undefined);
+    await page.waitForTimeout(750);
+  }
+
+  if (!(await hasUpgradePlanModal(page, 500))) {
+    return true;
+  }
+
+  const globalClose = page.locator('button[aria-label*="close" i], [role="button"][aria-label*="close" i]').last();
+
+  if (await globalClose.isVisible({ timeout: 500 }).catch(() => false)) {
+    await globalClose.click({ timeout: 1_000 }).catch(() => undefined);
+    await page.waitForTimeout(750);
+  }
+
+  if (!(await hasUpgradePlanModal(page, 500))) {
+    return true;
+  }
+
+  const box = await dialog.boundingBox().catch(() => null);
+
+  if (box) {
+    await page.mouse.click(box.x + box.width - 24, box.y + 24).catch(() => undefined);
+    await page.waitForTimeout(750);
+  }
+
+  return !(await hasUpgradePlanModal(page, 500));
+}
+
+async function dismissSoftPopups(page: Page) {
+  await dismissUpgradePlanModal(page);
+  await page.keyboard.press("Escape").catch(() => undefined);
+
+  for (const locator of popupDismissLocators(page)) {
+    if (!(await locator.isVisible({ timeout: 500 }).catch(() => false))) {
+      continue;
+    }
+
+    await locator.click({ timeout: 1_000 }).catch(() => undefined);
+    await page.waitForTimeout(750);
+  }
+}
+
+async function waitForSubmitButtonOrFail(page: Page, timeoutMs: number) {
+  const deadline = Date.now() + timeoutMs;
+  const candidates = submitButtonLocators(page);
+
+  while (Date.now() < deadline) {
+    for (const candidate of candidates) {
+      try {
+        await candidate.waitFor({
+          state: "visible",
+          timeout: 750,
+        });
+
+        if (await isActionableButton(candidate)) {
+          return candidate;
+        }
+      } catch {
+        // Try the next selector while the upload UI settles.
+      }
+    }
+
+    const projectPath = currentProjectPath(page);
+    const projectPageVisible = projectPath ? await firstVisibleLocator(projectPageIndicators(page), 750) : null;
+
+    if (projectPath && projectPageVisible) {
+      throw new Error(
+        `OpusClip opened project ${projectPath} before the 'Get clips in 1 click' button was clicked. The upload flow likely navigated away after file selection; check the upload selectors or OpusClip UI state.`,
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 750));
+  }
+
+  return null;
+}
+
 async function safeText(locator: Locator) {
   try {
     const text = await locator.innerText({
@@ -83,6 +239,108 @@ async function safeText(locator: Locator) {
   } catch {
     return null;
   }
+}
+
+function normalizeOpusClipProjectPath(href: string | null | undefined, baseUrl: string) {
+  if (!href) {
+    return null;
+  }
+
+  try {
+    const url = new URL(href, baseUrl);
+    return url.pathname.startsWith("/clip/") ? url.pathname : null;
+  } catch {
+    return null;
+  }
+}
+
+function currentProjectPath(page: Page) {
+  return normalizeOpusClipProjectPath(page.url(), page.url());
+}
+
+function dashboardProjectPath(page: Page) {
+  try {
+    const url = new URL(page.url());
+    const projectId = url.searchParams.get("projectId")?.trim();
+
+    return projectId ? `/clip/${projectId}` : null;
+  } catch {
+    return null;
+  }
+}
+
+async function openProjectPath(page: Page, projectPath: string) {
+  const appOrigin = new URL(getOpusClipConfig().appUrl).origin;
+
+  await page.goto(new URL(projectPath, appOrigin).toString(), {
+    waitUntil: "domcontentloaded",
+  });
+  await page.waitForTimeout(2_000);
+}
+
+function isTargetProjectPath(projectPath: string | null, existingProjectPaths?: Set<string>): projectPath is string {
+  return Boolean(projectPath && !existingProjectPaths?.has(projectPath));
+}
+
+function projectLinkLocators(page: Page) {
+  return [
+    ...(isConfiguredSelector(opusClipSelectors.projectCard) ? [page.locator(opusClipSelectors.projectCard)] : []),
+    page.locator('a[href^="/clip/"], a[href*="/clip/"]'),
+  ];
+}
+
+async function projectPathForLocator(locator: Locator, page: Page) {
+  const directHref = await locator.getAttribute("href").catch(() => null);
+  const nestedHref = directHref ?? (await locator.locator('a[href^="/clip/"], a[href*="/clip/"]').first().getAttribute("href").catch(() => null));
+
+  return normalizeOpusClipProjectPath(nestedHref, page.url());
+}
+
+async function collectExistingProjectPaths(page: Page) {
+  await page.waitForLoadState("domcontentloaded").catch(() => undefined);
+  await page.waitForTimeout(1_000);
+
+  const projectPaths = new Set<string>();
+
+  for (const locator of projectLinkLocators(page)) {
+    const count = Math.min(await locator.count().catch(() => 0), 100);
+
+    for (let index = 0; index < count; index += 1) {
+      const projectPath = await projectPathForLocator(locator.nth(index), page);
+
+      if (projectPath) {
+        projectPaths.add(projectPath);
+      }
+    }
+  }
+
+  return projectPaths;
+}
+
+async function findNewProjectLink(page: Page, existingProjectPaths?: Set<string>): Promise<ProjectLinkCandidate | null> {
+  for (const locator of projectLinkLocators(page)) {
+    const count = Math.min(await locator.count().catch(() => 0), 100);
+
+    for (let index = 0; index < count; index += 1) {
+      const candidate = locator.nth(index);
+      const projectPath = await projectPathForLocator(candidate, page);
+
+      if (!isTargetProjectPath(projectPath, existingProjectPaths)) {
+        continue;
+      }
+
+      if (!(await candidate.isVisible().catch(() => false))) {
+        continue;
+      }
+
+      return {
+        locator: candidate,
+        path: projectPath,
+      };
+    }
+  }
+
+  return null;
 }
 
 function newProjectLocators(page: Page) {
@@ -119,8 +377,38 @@ function urlInputLocators(page: Page) {
 function submitButtonLocators(page: Page) {
   return [
     ...(isConfiguredSelector(opusClipSelectors.submitButton) ? [page.locator(opusClipSelectors.submitButton).first()] : []),
+    page.getByRole("button", { name: /get clips in 1 click/i }).first(),
+    page.locator('button:has-text("Get clips in 1 click")').first(),
+    page.locator('button:has-text("Get clips")').first(),
     page.getByRole("button", { name: /get clips|create clips|generate clips|submit|continue|next|start|import/i }).first(),
     page.getByText(/get clips|create clips|generate clips|submit|continue|next|start|import/i).first(),
+  ];
+}
+
+function uploadInProgressLocators(page: Page) {
+  return [
+    page.getByText(/uploading\s+\d+(\.\d+)?\s*%/i).first(),
+    page.getByText(/\d+\s*(min|minute|sec|second)s?\s+left/i).first(),
+    page.getByRole("button", { name: /^cancel$/i }).first(),
+  ];
+}
+
+function uploadedSourceReadyLocators(page: Page) {
+  return [
+    page.getByRole("button", { name: /^remove$/i }).first(),
+    page.getByText(/speech language/i).first(),
+    page.getByText(/credit usage/i).first(),
+    page.getByText(/unauthorized clipping/i).first(),
+    page.locator("video").first(),
+  ];
+}
+
+function projectPageIndicators(page: Page) {
+  return [
+    page.getByText(/original clips/i).first(),
+    page.getByPlaceholder(/find keywords|moments/i).first(),
+    page.getByRole("button", { name: /select/i }).first(),
+    page.getByRole("button", { name: /filter/i }).first(),
   ];
 }
 
@@ -129,11 +417,16 @@ function downloadButtonLocators(scope: LocatorScope) {
     ...(isConfiguredSelector(opusClipSelectors.clipDownloadButton)
       ? [scope.locator(opusClipSelectors.clipDownloadButton).first()]
       : []),
+    scope.locator('button:has(img[alt*="download" i]), button:has(img[src*="download-icon"])').first(),
     scope.getByRole("button", { name: /download|export|save/i }).first(),
     scope.getByRole("link", { name: /download|export|save/i }).first(),
     scope.locator('a[href*=".mp4"], a[href*="download"], a[href*="cdn.opus"], a[href*="export"]').first(),
     scope.locator('button:has-text("Download"), button:has-text("Export"), a:has-text("Download"), a:has-text("Export")').first(),
   ];
+}
+
+function downloadIconButtons(page: Page) {
+  return page.locator('button:has(img[alt*="download" i]), button:has(img[src*="download-icon"])');
 }
 
 function clipCardLocators(page: Page) {
@@ -152,10 +445,103 @@ function completionLocators(page: Page) {
     ...(isConfiguredSelector(opusClipSelectors.processingCompleteIndicator)
       ? [page.locator(opusClipSelectors.processingCompleteIndicator).first()]
       : []),
+    ...projectPageIndicators(page),
     page.getByText(/clips? (are )?ready|processing complete|export|download/i).first(),
+    page.getByRole("button", { name: /Download HD/i }).first(),
     page.getByRole("button", { name: /download|export/i }).first(),
     page.getByRole("link", { name: /download|export/i }).first(),
   ];
+}
+
+async function waitForUploadedSourceReady(page: Page) {
+  const config = getOpusClipConfig();
+  const deadline = Date.now() + config.submitTimeoutMs;
+
+  while (Date.now() < deadline) {
+    await dismissSoftPopups(page);
+
+    const projectPath = currentProjectPath(page);
+    const projectPageVisible = projectPath ? await firstVisibleLocator(projectPageIndicators(page), 500) : null;
+
+    if (projectPath && projectPageVisible) {
+      throw new Error(
+        `OpusClip opened project ${projectPath} before the source upload became ready. The uploaded file may have been auto-imported or the upload selector matched the wrong UI.`,
+      );
+    }
+
+    if (await hasVisibleLocator(uploadInProgressLocators(page), 500)) {
+      await page.waitForTimeout(1_000);
+      continue;
+    }
+
+    const readyIndicator = await hasVisibleLocator(uploadedSourceReadyLocators(page), 750);
+    const submitButton = await waitForSubmitButtonOrFail(page, 1_000);
+
+    if (readyIndicator && submitButton) {
+      return submitButton;
+    }
+
+    await page.waitForTimeout(1_000);
+  }
+
+  throw new Error(
+    "Timed out waiting for the OpusClip source upload to finish. Expected upload progress to disappear and the uploaded file preview/remove control to appear before clicking 'Get clips in 1 click'.",
+  );
+}
+
+async function clickSubmitToStartClipping(page: Page, readySubmitButton?: Locator) {
+  const config = getOpusClipConfig();
+  const submitButton = readySubmitButton ?? (await waitForSubmitButtonOrFail(page, config.submitTimeoutMs));
+
+  if (!submitButton) {
+    throw new Error(
+      "Could not find an enabled OpusClip submit button. Set OPUSCLIP_SUBMIT_BUTTON_SELECTOR, for example a selector for the 'Get clips in 1 click' button.",
+    );
+  }
+
+  await submitButton.scrollIntoViewIfNeeded().catch(() => undefined);
+  const currentUrl = page.url();
+  await submitButton.click({
+    timeout: config.selectorTimeoutMs,
+  });
+  await Promise.race([
+    page.waitForURL((url) => url.toString() !== currentUrl, { timeout: 15_000 }).catch(() => undefined),
+    page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined),
+    page.waitForTimeout(5_000),
+  ]);
+  await page.waitForTimeout(2_000);
+}
+
+async function maybeOpenTargetProject(page: Page, options: ProcessingWaitOptions) {
+  await dismissSoftPopups(page);
+
+  const projectPath = currentProjectPath(page);
+
+  if (isTargetProjectPath(projectPath, options.existingProjectPaths) && (await firstVisibleLocator(projectPageIndicators(page), 750))) {
+    return true;
+  }
+
+  const projectPathFromDashboard = dashboardProjectPath(page);
+
+  if (isTargetProjectPath(projectPathFromDashboard, options.existingProjectPaths)) {
+    await openProjectPath(page, projectPathFromDashboard);
+    await dismissSoftPopups(page);
+    return Boolean(await firstVisibleLocator(projectPageIndicators(page), 1_000));
+  }
+
+  const newProject = await findNewProjectLink(page, options.existingProjectPaths);
+
+  if (!newProject) {
+    return false;
+  }
+
+  await openProjectPath(page, newProject.path);
+  await dismissSoftPopups(page);
+
+  return Boolean(
+    isTargetProjectPath(currentProjectPath(page), options.existingProjectPaths) &&
+      (await firstVisibleLocator(projectPageIndicators(page), 1_000)),
+  );
 }
 
 function errorLocators(page: Page) {
@@ -243,12 +629,17 @@ async function submitLocalFile(page: Page, localFilePath: string) {
         await fileInput.setInputFiles(localFilePath, {
           timeout: config.selectorTimeoutMs,
         });
-        await clickFirstVisible(submitButtonLocators(page), 2_000).catch(() => false);
-        return;
+      } else {
+        continue;
       }
     } catch {
       // Continue to the file chooser fallback.
+      continue;
     }
+
+    const submitButton = await waitForUploadedSourceReady(page);
+    await clickSubmitToStartClipping(page, submitButton);
+    return;
   }
 
   const fileChooserPromise = page.waitForEvent("filechooser", {
@@ -267,7 +658,8 @@ async function submitLocalFile(page: Page, localFilePath: string) {
   }
 
   await fileChooser.setFiles(localFilePath);
-  await clickFirstVisible(submitButtonLocators(page), 2_000).catch(() => false);
+  const submitButton = await waitForUploadedSourceReady(page);
+  await clickSubmitToStartClipping(page, submitButton);
 }
 
 async function submitSourceUrl(page: Page, sourceUrl: string) {
@@ -292,11 +684,7 @@ async function submitSourceUrl(page: Page, sourceUrl: string) {
     timeout: config.selectorTimeoutMs,
   });
 
-  const clickedSubmit = await clickFirstVisible(submitButtonLocators(page), config.selectorTimeoutMs);
-
-  if (!clickedSubmit) {
-    throw new Error("Could not find an OpusClip submit button. Set OPUSCLIP_SUBMIT_BUTTON_SELECTOR.");
-  }
+  await clickSubmitToStartClipping(page);
 }
 
 async function getBestClipCardLocator(page: Page) {
@@ -313,6 +701,23 @@ async function getBestClipCardLocator(page: Page) {
   }
 
   return null;
+}
+
+async function getReadyClipCount(page: Page) {
+  const downloadHdCount = await page.getByRole("button", { name: /Download HD/i }).count().catch(() => 0);
+
+  if (downloadHdCount > 0) {
+    return downloadHdCount;
+  }
+
+  const downloadIconCount = await downloadIconButtons(page).count().catch(() => 0);
+
+  if (downloadIconCount > 0) {
+    return downloadIconCount;
+  }
+
+  const cardLocator = await getBestClipCardLocator(page);
+  return cardLocator ? await cardLocator.count().catch(() => 0) : 0;
 }
 
 async function getDownloadHref(scope: LocatorScope, page: Page) {
@@ -349,19 +754,47 @@ async function downloadFromHref(page: Page, href: string, clip: OpusClipGenerate
 
 async function clickForDownload(page: Page, locator: Locator, clip: OpusClipGeneratedClip) {
   const config = getOpusClipConfig();
+  const upgradePlanResult = "upgrade-plan" as const;
   const downloadPromise = page
     .waitForEvent("download", {
       timeout: config.downloadTimeoutMs,
     })
     .catch(() => null);
+  const upgradePlanPromise = hasUpgradePlanModal(page, config.selectorTimeoutMs).then((visible) =>
+    visible ? upgradePlanResult : null,
+  );
 
-  await locator.click({
-    timeout: config.selectorTimeoutMs,
-  });
+  try {
+    await locator.click({
+      timeout: config.selectorTimeoutMs,
+    });
+  } catch (error) {
+    if (await dismissUpgradePlanModal(page)) {
+      return null;
+    }
 
-  const download = await downloadPromise;
+    await dismissSoftPopups(page);
+    if (!(await hasUpgradePlanModal(page, 500))) {
+      return null;
+    }
+
+    throw error;
+  }
+
+  const firstResult = await Promise.race([downloadPromise, upgradePlanPromise]);
+
+  if (firstResult === upgradePlanResult) {
+    await dismissUpgradePlanModal(page);
+    return null;
+  }
+
+  const download = firstResult ?? (await downloadPromise);
 
   if (!download) {
+    if (!(await dismissUpgradePlanModal(page))) {
+      await dismissSoftPopups(page);
+    }
+
     return null;
   }
 
@@ -424,7 +857,7 @@ export async function openOpusClip(): Promise<OpusClipAutomationSession> {
 export async function submitVideoToOpusClip(page: Page, source: OpusClipSource) {
   await page.bringToFront();
 
-  if (isEnabled("OPUSCLIP_ENABLE_REAL_SUBMIT") && !existsSync(getOpusClipConfig().storageStatePath)) {
+  if (isEnabled("OPUSCLIP_ENABLE_REAL_SUBMIT") && !hasSavedOpusClipSession(getOpusClipConfig())) {
     throw new Error("Missing OpusClip storageState. Run npm run opusclip:login before starting the worker.");
   }
 
@@ -458,7 +891,7 @@ export async function submitVideoToOpusClip(page: Page, source: OpusClipSource) 
   };
 }
 
-export async function waitForProcessingComplete(page: Page) {
+export async function waitForProcessingComplete(page: Page, options: ProcessingWaitOptions = {}) {
   await page.waitForLoadState("domcontentloaded");
 
   if (!isEnabled("OPUSCLIP_ENABLE_REAL_WAIT")) {
@@ -476,6 +909,7 @@ export async function waitForProcessingComplete(page: Page) {
 
   while (Date.now() < deadline) {
     await ensureAuthenticated(page);
+    await dismissSoftPopups(page);
 
     const errorIndicator = await firstVisibleLocator(errorLocators(page), 750);
 
@@ -483,16 +917,30 @@ export async function waitForProcessingComplete(page: Page) {
       throw new Error(`OpusClip showed an error while processing: ${(await safeText(errorIndicator)) ?? "Unknown page error"}`);
     }
 
-    const cardLocator = await getBestClipCardLocator(page);
-    const clipCount = cardLocator ? await cardLocator.count().catch(() => 0) : 0;
-    const completeIndicator = await firstVisibleLocator(completionLocators(page), 750);
+    const projectPath = currentProjectPath(page);
+    const isTargetProject = isTargetProjectPath(projectPath, options.existingProjectPaths);
 
-    if (clipCount > 0 && completeIndicator) {
-      return {
-        completed: true,
-        simulated: false,
-        clipCount,
-      };
+    if (isTargetProject && (await firstVisibleLocator(projectPageIndicators(page), 750))) {
+      const clipCount = await getReadyClipCount(page);
+      const completeIndicator = await firstVisibleLocator(completionLocators(page), 750);
+
+      if (clipCount > 0 && completeIndicator) {
+        return {
+          completed: true,
+          simulated: false,
+          clipCount,
+          projectPath,
+        };
+      }
+    }
+
+    if (projectPath && options.existingProjectPaths?.has(projectPath)) {
+      await page.goto(config.appUrl, {
+        waitUntil: "domcontentloaded",
+      }).catch(() => undefined);
+      await page.waitForTimeout(2_000);
+    } else {
+      await maybeOpenTargetProject(page, options);
     }
 
     await page.waitForTimeout(config.processingPollMs);
@@ -504,6 +952,30 @@ export async function waitForProcessingComplete(page: Page) {
 export async function listGeneratedClips(page: Page): Promise<OpusClipGeneratedClip[]> {
   if (!isEnabled("OPUSCLIP_ENABLE_REAL_LIST")) {
     return [];
+  }
+
+  await dismissSoftPopups(page);
+
+  const downloadHdButtons = page.getByRole("button", { name: /Download HD/i });
+  const downloadHdCount = Math.min(await downloadHdButtons.count().catch(() => 0), 50);
+
+  if (downloadHdCount > 0) {
+    return Array.from({ length: downloadHdCount }, (_, index) => ({
+      opusclipClipId: `opusclip-download-hd-${index + 1}`,
+      index,
+      title: `OpusClip result ${index + 1}`,
+    }));
+  }
+
+  const downloadIcons = downloadIconButtons(page);
+  const downloadIconCount = Math.min(await downloadIcons.count().catch(() => 0), 50);
+
+  if (downloadIconCount > 0) {
+    return Array.from({ length: downloadIconCount }, (_, index) => ({
+      opusclipClipId: `opusclip-download-icon-${index + 1}`,
+      index,
+      title: `OpusClip result ${index + 1}`,
+    }));
   }
 
   const cardLocator = await getBestClipCardLocator(page);
@@ -543,6 +1015,42 @@ export async function downloadClip(page: Page, clip: OpusClipGeneratedClip): Pro
     throw new Error("downloadClip is disabled. Set OPUSCLIP_ENABLE_REAL_DOWNLOAD=true after testing OpusClip selectors.");
   }
 
+  await dismissSoftPopups(page);
+
+  if (typeof clip.index === "number") {
+    const downloadHdButtons = page.getByRole("button", { name: /Download HD/i });
+    const downloadHdCount = await downloadHdButtons.count().catch(() => 0);
+
+    if (downloadHdCount > clip.index) {
+      const downloaded = await clickForDownload(page, downloadHdButtons.nth(clip.index), clip);
+
+      if (downloaded) {
+        return downloaded;
+      }
+    }
+
+    const iconButtons = downloadIconButtons(page);
+    const iconButtonCount = await iconButtons.count().catch(() => 0);
+
+    if (iconButtonCount > clip.index) {
+      const downloaded = await clickForDownload(page, iconButtons.nth(clip.index), clip);
+
+      if (downloaded) {
+        return downloaded;
+      }
+
+      const modalDownloaded = await clickForDownload(
+        page,
+        page.getByRole("button", { name: /download hd|download|export|save/i }).first(),
+        clip,
+      ).catch(() => null);
+
+      if (modalDownloaded) {
+        return modalDownloaded;
+      }
+    }
+  }
+
   const cardLocator = await getBestClipCardLocator(page);
   const scope = cardLocator && typeof clip.index === "number" ? cardLocator.nth(clip.index) : page;
   const href = await getDownloadHref(scope, page);
@@ -574,7 +1082,7 @@ export async function downloadClip(page: Page, clip: OpusClipGeneratedClip): Pro
   }
 
   throw new Error(
-    `Could not download OpusClip result ${clip.index ?? clip.opusclipClipId}. Set OPUSCLIP_CLIP_DOWNLOAD_BUTTON_SELECTOR if the UI changed.`,
+    `Could not download OpusClip result ${clip.index ?? clip.opusclipClipId}. The clip may be blocked by an OpusClip upgrade modal, or the download selector may have changed. Set OPUSCLIP_CLIP_DOWNLOAD_BUTTON_SELECTOR if the UI changed.`,
   );
 }
 
@@ -587,13 +1095,30 @@ export async function runOpusClipAutomation(input: OpusClipAutomationInput): Pro
 
   try {
     session = await openOpusClip();
+    const existingProjectPaths = await collectExistingProjectPaths(session.page);
+
     await submitVideoToOpusClip(session.page, input);
-    const processingResult = await waitForProcessingComplete(session.page);
+    const processingResult = await waitForProcessingComplete(session.page, {
+      existingProjectPaths,
+    });
     const clips = await listGeneratedClips(session.page);
     const downloadedClips: DownloadedOpusClip[] = [];
+    const downloadErrors: string[] = [];
 
     for (const clip of clips) {
-      downloadedClips.push(await downloadClip(session.page, clip));
+      try {
+        downloadedClips.push(await downloadClip(session.page, clip));
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        downloadErrors.push(`Clip ${clip.index ?? clip.opusclipClipId}: ${message}`);
+        await dismissSoftPopups(session.page).catch(() => undefined);
+      }
+    }
+
+    if (clips.length > 0 && downloadedClips.length === 0 && downloadErrors.length > 0) {
+      throw new Error(
+        `OpusClip generated ${clips.length} clip(s), but none could be downloaded. Last download error: ${downloadErrors.at(-1)}`,
+      );
     }
 
     return {

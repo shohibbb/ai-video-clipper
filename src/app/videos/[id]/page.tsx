@@ -197,7 +197,7 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
           <div className="mt-6 grid gap-6">
             {clips.length ? (
               clips.map((clip, index) => (
-                <article key={clip.id} className="grid gap-5 rounded-[2rem] border border-[color:var(--line)] bg-[#f7f1e3] p-4 lg:grid-cols-[minmax(15rem,0.62fr)_1fr]">
+                <article key={clip.id} className="grid items-start gap-5 rounded-[2rem] border border-[color:var(--line)] bg-[#f7f1e3] p-4 lg:grid-cols-[minmax(15rem,0.62fr)_1fr]">
                   <ClipPreview
                     title={clip.title || `Clip ${index + 1}`}
                     status={clip.status}
