@@ -13,6 +13,7 @@ import {
   ReapApiError,
 } from "../../src/lib/reap";
 import { getStorageService } from "../../src/lib/storage";
+import { enqueueReapPollingJob } from "../../src/lib/queue/reap-polling-queue";
 
 const MAX_UPLOAD_RETRIES = 3;
 const UPLOAD_RETRY_DELAY_MS = 2_000;
@@ -191,7 +192,33 @@ export async function processReapVideoJob(job: Job<VideoProcessingJobData>) {
 
     await job.updateProgress(50);
 
-    await logger.info("Reap project submitted. Worker will exit — webhook handler will download clips on completion.", {
+    await logger.info("Enqueuing Reap polling job to watch for project completion.", {
+      phase: 3,
+      videoId,
+      reapProjectId,
+    });
+
+    try {
+      await enqueueReapPollingJob({
+        userId,
+        videoId,
+        reapProjectId,
+      });
+      await logger.info("Reap polling job enqueued successfully.", {
+        phase: 3,
+        videoId,
+        reapProjectId,
+      });
+    } catch (pollingError) {
+      await logger.warning("Failed to enqueue Reap polling job. Clips will not auto-download. Use manual poll API or webhook.", {
+        phase: 3,
+        videoId,
+        reapProjectId,
+        error: serializeError(pollingError),
+      });
+    }
+
+    await logger.info("Reap project submitted. Polling worker will check for completion.", {
       phase: 3,
       videoId,
       reapProjectId,
