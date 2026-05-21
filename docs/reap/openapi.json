@@ -1,0 +1,2391 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Reap Automation API",
+    "description": "AI-powered video processing automation API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://public.reap.video/api/v1"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/automation/get-all-presets": {
+      "get": {
+        "operationId": "getAllPresets",
+        "summary": "Get All Presets",
+        "description": "Retrieve all available caption presets for your studio",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Number of presets per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPresetsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-translation-languages": {
+      "get": {
+        "operationId": "getTranslationLanguages",
+        "summary": "Get Translation Languages",
+        "description": "Retrieve all supported languages for caption translation",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanguagesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-dubbing-languages": {
+      "get": {
+        "operationId": "getDubbingLanguages",
+        "summary": "Get Dubbing Languages",
+        "description": "Retrieve all supported languages for video dubbing",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LanguagesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-upload-url": {
+      "post": {
+        "operationId": "getUploadUrl",
+        "summary": "Get Upload URL",
+        "description": "Get a presigned URL to upload video files",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "filename"
+                ],
+                "properties": {
+                  "filename": {
+                    "type": "string",
+                    "description": "Name of the file to upload (must include .mp4 or .mov extension)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-all-uploads": {
+      "get": {
+        "operationId": "getAllUploads",
+        "summary": "Get All Uploads",
+        "description": "Retrieve all uploaded files for your studio",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Number of uploads per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetUploadsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/create-clips": {
+      "post": {
+        "operationId": "createClips",
+        "summary": "Create Clips",
+        "description": "Create AI-powered short clips from long-form videos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClipsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/create-captions": {
+      "post": {
+        "operationId": "createCaptions",
+        "summary": "Create Captions",
+        "description": "Add AI-generated captions to your videos",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCaptionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/create-transcription": {
+      "post": {
+        "operationId": "createTranscription",
+        "summary": "Create Transcription",
+        "description": "Generate accurate transcriptions from video and audio content",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTranscriptionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/create-reframe": {
+      "post": {
+        "operationId": "createReframe",
+        "summary": "Create Reframe",
+        "description": "Automatically reframe videos for different aspect ratios",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReframeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/create-dubbing": {
+      "post": {
+        "operationId": "createDubbing",
+        "summary": "Create Dubbing",
+        "description": "Create AI-powered voice dubbing for videos in different languages",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDubbingRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-all-projects": {
+      "get": {
+        "operationId": "getAllProjects",
+        "summary": "Get All Projects",
+        "description": "Retrieve all automation projects in your studio",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of projects per page (max 100)"
+          },
+          {
+            "name": "projectType",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "clipping",
+                  "captions",
+                  "reframe",
+                  "dubbing",
+                  "transcription"
+                ]
+              }
+            },
+            "description": "Filter by project type"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "queued",
+                  "prepped",
+                  "draft",
+                  "processing",
+                  "finalizing",
+                  "completed",
+                  "invalid",
+                  "expired",
+                  "failed",
+                  "error"
+                ]
+              }
+            },
+            "description": "Filter by project status"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search projects by title"
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter projects created after this Unix timestamp"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter projects created before this Unix timestamp"
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "createdAt",
+                "updatedAt",
+                "duration"
+              ],
+              "default": "createdAt"
+            },
+            "description": "Sort field"
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            },
+            "description": "Sort direction"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetProjectsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-project-status": {
+      "get": {
+        "operationId": "getProjectStatus",
+        "summary": "Get Project Status",
+        "description": "Check the current processing status of a video project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectStatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-project-details": {
+      "get": {
+        "operationId": "getProjectDetails",
+        "summary": "Get Project Details",
+        "description": "Retrieve complete details and configuration for a video project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-project-clips": {
+      "get": {
+        "operationId": "getProjectClips",
+        "summary": "Get Project Clips",
+        "description": "Retrieve all clips generated from a video project",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          },
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Number of clips per page (max 100)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetClipsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-clip-details": {
+      "get": {
+        "operationId": "getClipDetails",
+        "summary": "Get Clip Details",
+        "description": "Retrieve details for a specific clip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          },
+          {
+            "$ref": "#/components/parameters/clipId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/update-project": {
+      "post": {
+        "operationId": "updateProject",
+        "summary": "Update Project",
+        "description": "Update the title of a project",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationProject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/update-clip": {
+      "post": {
+        "operationId": "updateClip",
+        "summary": "Update Clip",
+        "description": "Update the title and caption of a clip",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationClip"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/delete-project": {
+      "delete": {
+        "operationId": "deleteProject",
+        "summary": "Delete Project",
+        "description": "Delete a project (soft delete)",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteProjectResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/delete-clip": {
+      "delete": {
+        "operationId": "deleteClip",
+        "summary": "Delete Clip",
+        "description": "Permanently delete a clip",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/projectId"
+          },
+          {
+            "$ref": "#/components/parameters/clipId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteClipResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/delete-upload": {
+      "delete": {
+        "operationId": "deleteUpload",
+        "summary": "Delete Upload",
+        "description": "Delete an uploaded file",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/uploadId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-integrations": {
+      "get": {
+        "operationId": "getIntegrations",
+        "summary": "Get Integrations",
+        "description": "List all active social media integrations",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetIntegrationsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/publish-clip": {
+      "post": {
+        "operationId": "publishClip",
+        "summary": "Publish Clip",
+        "description": "Immediately publish a completed clip to social media",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishClipRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationPost"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/schedule-clips": {
+      "post": {
+        "operationId": "scheduleClips",
+        "summary": "Schedule Clips",
+        "description": "Schedule one or more clips for future publishing",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleClipsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScheduleClipsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-all-posts": {
+      "get": {
+        "operationId": "getAllPosts",
+        "summary": "Get All Posts",
+        "description": "Retrieve all publisher posts",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/page"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            },
+            "description": "Number of posts per page (max 100)"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "processing",
+                  "draft",
+                  "completed",
+                  "failed",
+                  "cancelled",
+                  "unresolved"
+                ]
+              }
+            },
+            "description": "Filter by post status"
+          },
+          {
+            "name": "createdAfter",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter posts after this Unix timestamp"
+          },
+          {
+            "name": "createdBefore",
+            "in": "query",
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Filter posts before this Unix timestamp"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetPostsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/get-post-details": {
+      "get": {
+        "operationId": "getPostDetails",
+        "summary": "Get Post Details",
+        "description": "Retrieve details for a specific post",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/postId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationPost"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/update-post": {
+      "post": {
+        "operationId": "updatePost",
+        "summary": "Update Post",
+        "description": "Update a scheduled post's metadata or reschedule it",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutomationPost"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/automation/delete-post": {
+      "delete": {
+        "operationId": "deletePost",
+        "summary": "Delete Post",
+        "description": "Delete a post and cancel its schedule",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/postId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePostResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "parameters": {
+      "page": {
+        "name": "page",
+        "in": "query",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        },
+        "description": "Page number for pagination"
+      },
+      "projectId": {
+        "name": "projectId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Unique identifier of the project"
+      },
+      "clipId": {
+        "name": "clipId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Unique identifier of the clip"
+      },
+      "uploadId": {
+        "name": "uploadId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Unique identifier of the upload"
+      },
+      "postId": {
+        "name": "postId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Unique identifier of the post"
+      }
+    },
+    "schemas": {
+      "VideoGenre": {
+        "type": "string",
+        "enum": [
+          "talking",
+          "screenshare",
+          "gaming"
+        ],
+        "default": "talking"
+      },
+      "VideoOrientation": {
+        "type": "string",
+        "enum": [
+          "landscape",
+          "portrait",
+          "square"
+        ]
+      },
+      "ExportResolution": {
+        "type": "integer",
+        "enum": [
+          720,
+          1080,
+          1440,
+          2160
+        ],
+        "default": 720
+      },
+      "TranscriptionScript": {
+        "type": "string",
+        "enum": [
+          "native",
+          "roman"
+        ],
+        "default": "native"
+      },
+      "ReframeOrientation": {
+        "type": "string",
+        "enum": [
+          "portrait",
+          "square"
+        ],
+        "default": "portrait"
+      },
+      "VideoFileMeta": {
+        "type": "object",
+        "properties": {
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "aspectRatio": {
+            "type": "string"
+          },
+          "size": {
+            "type": "number"
+          },
+          "bitrate": {
+            "type": "number"
+          },
+          "fps": {
+            "type": "number"
+          },
+          "duration": {
+            "type": "number"
+          },
+          "rotation": {
+            "type": "integer"
+          },
+          "resolution": {
+            "type": "integer"
+          },
+          "codec": {
+            "type": "string"
+          },
+          "codecFullName": {
+            "type": "string"
+          },
+          "codecTag": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "formatFullName": {
+            "type": "string"
+          }
+        }
+      },
+      "DubSubLanguage": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BrandKitPreferences": {
+        "type": "object",
+        "properties": {
+          "addAudiogram": {
+            "type": "boolean",
+            "default": false
+          },
+          "addCaptions": {
+            "type": "boolean",
+            "default": true
+          },
+          "genre": {
+            "$ref": "#/components/schemas/VideoGenre"
+          },
+          "language": {
+            "type": "string",
+            "default": "en"
+          },
+          "translationLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "transcriptionScript": {
+            "$ref": "#/components/schemas/TranscriptionScript"
+          },
+          "orientation": {
+            "$ref": "#/components/schemas/VideoOrientation"
+          },
+          "resolution": {
+            "$ref": "#/components/schemas/ExportResolution"
+          },
+          "clipDurations": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "AutomationPreset": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "system",
+              "user"
+            ]
+          },
+          "preferences": {
+            "$ref": "#/components/schemas/BrandKitPreferences"
+          }
+        }
+      },
+      "UploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "image"
+            ]
+          },
+          "fileSize": {
+            "type": "integer",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "verified",
+              "rejected"
+            ]
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "UploadUrlResponse": {
+        "type": "object",
+        "properties": {
+          "uploadUrl": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "fileType": {
+            "type": "string",
+            "enum": [
+              "video",
+              "audio",
+              "image"
+            ]
+          },
+          "fileSize": {
+            "type": "integer",
+            "nullable": true
+          },
+          "contentType": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "upload",
+              "verified",
+              "rejected"
+            ]
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "AutomationProject": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "thumbnail": {
+            "type": "string"
+          },
+          "billedDuration": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "prepped",
+              "draft",
+              "processing",
+              "finalizing",
+              "completed",
+              "invalid",
+              "expired",
+              "failed",
+              "error"
+            ]
+          },
+          "projectType": {
+            "type": "string",
+            "enum": [
+              "clipping",
+              "captions",
+              "reframe",
+              "dubbing",
+              "transcription"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "Upload",
+              "Youtube",
+              "Vimeo",
+              "TwitchVod",
+              "Twitter",
+              "RumbleEmbed",
+              "Generic"
+            ]
+          },
+          "genre": {
+            "$ref": "#/components/schemas/VideoGenre"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "clipDurations": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          },
+          "selectedStart": {
+            "type": "number",
+            "nullable": true
+          },
+          "selectedEnd": {
+            "type": "number",
+            "nullable": true
+          },
+          "reframeClips": {
+            "type": "boolean"
+          },
+          "exportResolution": {
+            "type": "integer"
+          },
+          "exportOrientation": {
+            "$ref": "#/components/schemas/VideoOrientation"
+          },
+          "captionsPreset": {
+            "type": "string",
+            "nullable": true
+          },
+          "enableCaptions": {
+            "type": "boolean"
+          },
+          "enableEmojis": {
+            "type": "boolean"
+          },
+          "enableHighlights": {
+            "type": "boolean"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "dubbingLanguage": {
+            "type": "string",
+            "nullable": true
+          },
+          "translateTranscription": {
+            "type": "boolean"
+          },
+          "translationLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transcriptionScript": {
+            "$ref": "#/components/schemas/TranscriptionScript"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoFileMeta"
+          },
+          "urls": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "AutomationClip": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "clipUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Direct download URL for the final clip (includes captions if enabled)"
+          },
+          "clipWithCaptionsUrl": {
+            "type": "string",
+            "nullable": true,
+            "deprecated": true,
+            "description": "Deprecated. Use clipUrl instead."
+          },
+          "startTime": {
+            "type": "number"
+          },
+          "endTime": {
+            "type": "number"
+          },
+          "duration": {
+            "type": "number"
+          },
+          "topic": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true
+          },
+          "language": {
+            "type": "string",
+            "nullable": true
+          },
+          "translateTranscription": {
+            "type": "boolean"
+          },
+          "translationLanguages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "transcriptionScript": {
+            "$ref": "#/components/schemas/TranscriptionScript"
+          },
+          "viralityScore": {
+            "type": "number",
+            "nullable": true
+          },
+          "reframeClips": {
+            "type": "boolean"
+          },
+          "exportResolution": {
+            "type": "integer"
+          },
+          "exportOrientation": {
+            "$ref": "#/components/schemas/VideoOrientation"
+          },
+          "captionsPreset": {
+            "type": "string",
+            "nullable": true
+          },
+          "enableCaptions": {
+            "type": "boolean"
+          },
+          "enableEmojis": {
+            "type": "boolean"
+          },
+          "enableHighlights": {
+            "type": "boolean"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/VideoFileMeta"
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "ProjectStatusResponse": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "projectType": {
+            "type": "string",
+            "enum": [
+              "clipping",
+              "captions",
+              "reframe",
+              "dubbing",
+              "transcription"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "Upload",
+              "Youtube",
+              "Vimeo",
+              "TwitchVod",
+              "Twitter",
+              "RumbleEmbed",
+              "Generic"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "prepped",
+              "draft",
+              "processing",
+              "finalizing",
+              "completed",
+              "invalid",
+              "expired",
+              "failed",
+              "error"
+            ]
+          }
+        }
+      },
+      "CreateClipsRequest": {
+        "type": "object",
+        "properties": {
+          "sourceUrl": {
+            "type": "string",
+            "description": "YouTube URL to process (alternative to uploadId)"
+          },
+          "uploadId": {
+            "type": "string",
+            "description": "Upload ID from a previously uploaded file (alternative to sourceUrl)"
+          },
+          "reframeClips": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to automatically reframe clips for different aspect ratios"
+          },
+          "exportOrientation": {
+            "type": "string",
+            "enum": [
+              "landscape",
+              "portrait",
+              "square"
+            ],
+            "default": "landscape",
+            "description": "Output orientation for the clips"
+          },
+          "exportResolution": {
+            "type": "integer",
+            "enum": [
+              720,
+              1080,
+              1440,
+              2160
+            ],
+            "default": 720,
+            "description": "Output resolution for the clips"
+          },
+          "captionsPreset": {
+            "type": "string",
+            "nullable": true,
+            "description": "Caption style preset ID (null to disable captions)"
+          },
+          "enableEmojis": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to add emojis to captions"
+          },
+          "enableHighlights": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to highlight keywords in captions"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary language of the video content (auto-detected if not provided)"
+          },
+          "translationLanguage": {
+            "type": "string",
+            "nullable": true,
+            "description": "Language to translate captions to"
+          },
+          "transcriptionScript": {
+            "type": "string",
+            "enum": [
+              "native",
+              "roman"
+            ],
+            "default": "native",
+            "description": "Script format for transcription output"
+          },
+          "genre": {
+            "type": "string",
+            "enum": [
+              "talking",
+              "screenshare",
+              "gaming"
+            ],
+            "default": "talking",
+            "description": "Video genre for better AI analysis"
+          },
+          "selectedStart": {
+            "type": "number",
+            "nullable": true,
+            "description": "Start time in seconds for processing"
+          },
+          "selectedEnd": {
+            "type": "number",
+            "nullable": true,
+            "description": "End time in seconds for processing"
+          },
+          "clipDurations": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "default": [],
+            "description": "Preferred clip duration ranges as [min, max] pairs in seconds. Valid ranges: [0,30], [30,60], [60,90], [90,180], [180,300]. When omitted, the AI determines optimal durations."
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": [],
+            "description": "Topic preferences to guide the AI when selecting clip segments. For example: [\"product launch\", \"customer testimonials\"]. When omitted, the AI selects the most engaging topics automatically."
+          }
+        }
+      },
+      "CreateCaptionsRequest": {
+        "type": "object",
+        "properties": {
+          "sourceUrl": {
+            "type": "string",
+            "description": "Direct URL to a video file (alternative to uploadId)"
+          },
+          "uploadId": {
+            "type": "string",
+            "description": "Upload ID from a previously uploaded file (alternative to sourceUrl)"
+          },
+          "captionsPreset": {
+            "type": "string",
+            "nullable": true,
+            "description": "Caption style preset ID. Defaults to system_beasty if not specified."
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary language of the video content (auto-detected if not provided)"
+          },
+          "translationLanguage": {
+            "type": "string",
+            "nullable": true,
+            "description": "Language to translate captions to"
+          },
+          "transcriptionScript": {
+            "type": "string",
+            "enum": [
+              "native",
+              "roman"
+            ],
+            "default": "native",
+            "description": "Script format for transcription output"
+          },
+          "enableEmojis": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to add contextual emojis to captions"
+          },
+          "enableHighlights": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to highlight keywords in captions"
+          },
+          "resolution": {
+            "type": "integer",
+            "enum": [
+              720,
+              1080,
+              1440,
+              2160
+            ],
+            "default": 720,
+            "description": "Output resolution (only applicable when sourceUrl is provided)"
+          }
+        }
+      },
+      "CreateTranscriptionRequest": {
+        "type": "object",
+        "properties": {
+          "sourceUrl": {
+            "type": "string",
+            "description": "URL to a video or audio file (alternative to uploadId)"
+          },
+          "uploadId": {
+            "type": "string",
+            "description": "Upload ID from a previously uploaded file (alternative to sourceUrl)"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary language of the video content (auto-detected if not provided)"
+          },
+          "translationLanguage": {
+            "type": "string",
+            "nullable": true,
+            "description": "Language to translate the transcription to"
+          },
+          "transcriptionScript": {
+            "type": "string",
+            "enum": [
+              "native",
+              "roman"
+            ],
+            "default": "native",
+            "description": "Script format for transcription output"
+          }
+        }
+      },
+      "CreateReframeRequest": {
+        "type": "object",
+        "required": [
+          "uploadId"
+        ],
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "description": "Upload ID from a previously uploaded file"
+          },
+          "genre": {
+            "type": "string",
+            "enum": [
+              "talking",
+              "screenshare",
+              "gaming"
+            ],
+            "default": "talking",
+            "description": "Video genre for better AI analysis"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "portrait",
+              "square"
+            ],
+            "default": "portrait",
+            "description": "Target orientation"
+          },
+          "disableAutoSplit": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether to disable automatic splitting into segments"
+          }
+        }
+      },
+      "CreateDubbingRequest": {
+        "type": "object",
+        "required": [
+          "uploadId",
+          "sourceLanguage",
+          "targetLanguage"
+        ],
+        "properties": {
+          "uploadId": {
+            "type": "string",
+            "description": "Upload ID from a previously uploaded file"
+          },
+          "sourceLanguage": {
+            "type": "string",
+            "description": "Language code of the original video content (e.g. en-US, es-ES)"
+          },
+          "targetLanguage": {
+            "type": "string",
+            "description": "Language code for the dubbing target (e.g. fr-FR, de-DE)"
+          }
+        }
+      },
+      "GetPresetsResponse": {
+        "type": "object",
+        "properties": {
+          "presets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationPreset"
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalPresets": {
+            "type": "integer"
+          }
+        }
+      },
+      "GetUploadsResponse": {
+        "type": "object",
+        "properties": {
+          "uploads": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UploadResponse"
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalUploads": {
+            "type": "integer"
+          }
+        }
+      },
+      "GetProjectsResponse": {
+        "type": "object",
+        "properties": {
+          "projects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationProject"
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalProjects": {
+            "type": "integer"
+          }
+        }
+      },
+      "GetClipsResponse": {
+        "type": "object",
+        "properties": {
+          "clips": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationClip"
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalClips": {
+            "type": "integer"
+          }
+        }
+      },
+      "LanguagesResponse": {
+        "type": "object",
+        "properties": {
+          "sourceLanguages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DubSubLanguage"
+            }
+          },
+          "targetLanguages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DubSubLanguage"
+            }
+          }
+        }
+      },
+      "YouTubeSettings": {
+        "type": "object",
+        "properties": {
+          "privacy": {
+            "type": "string",
+            "enum": [
+              "public",
+              "unlisted",
+              "private"
+            ],
+            "default": "public",
+            "description": "YouTube video privacy"
+          },
+          "embeddable": {
+            "type": "boolean",
+            "default": true,
+            "description": "Allow embedding"
+          },
+          "publicStats": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show public statistics"
+          },
+          "madeForKids": {
+            "type": "boolean",
+            "default": false,
+            "description": "Mark as made for kids"
+          }
+        }
+      },
+      "TikTokSettings": {
+        "type": "object",
+        "properties": {
+          "privacy": {
+            "type": "string",
+            "enum": [
+              "public",
+              "unlisted",
+              "followers",
+              "friends",
+              "private"
+            ],
+            "default": "public",
+            "description": "TikTok video privacy"
+          },
+          "disableComments": {
+            "type": "boolean",
+            "default": false
+          },
+          "disableDuet": {
+            "type": "boolean",
+            "default": false
+          },
+          "disableStitch": {
+            "type": "boolean",
+            "default": false
+          },
+          "brandContent": {
+            "type": "boolean",
+            "default": false
+          },
+          "brandOrganic": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "InstagramSettings": {
+        "type": "object",
+        "properties": {
+          "shareToFeed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Share reel to Instagram feed"
+          }
+        }
+      },
+      "LinkedInSettings": {
+        "type": "object",
+        "properties": {
+          "privacy": {
+            "type": "string",
+            "enum": [
+              "public",
+              "connections",
+              "logged_in"
+            ],
+            "default": "public",
+            "description": "LinkedIn post visibility"
+          }
+        }
+      },
+      "PlatformSettings": {
+        "type": "object",
+        "properties": {
+          "youtube": {
+            "nullable": true,
+            "$ref": "#/components/schemas/YouTubeSettings"
+          },
+          "tiktok": {
+            "nullable": true,
+            "$ref": "#/components/schemas/TikTokSettings"
+          },
+          "instagram": {
+            "nullable": true,
+            "$ref": "#/components/schemas/InstagramSettings"
+          },
+          "linkedin": {
+            "nullable": true,
+            "$ref": "#/components/schemas/LinkedInSettings"
+          }
+        }
+      },
+      "AutomationIntegration": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "youtube",
+              "instagram",
+              "tiktok",
+              "linkedin",
+              "x"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "username": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "profilePictureUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "GetIntegrationsResponse": {
+        "type": "object",
+        "properties": {
+          "integrations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationIntegration"
+            }
+          }
+        }
+      },
+      "AutomationPost": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "clipId": {
+            "type": "string",
+            "nullable": true
+          },
+          "platforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "successPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "failedPlatforms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "draft",
+              "completed",
+              "failed",
+              "cancelled",
+              "unresolved"
+            ]
+          },
+          "scheduleType": {
+            "type": "string",
+            "enum": [
+              "scheduled",
+              "immediate"
+            ]
+          },
+          "scheduleDate": {
+            "type": "integer"
+          },
+          "publishDate": {
+            "type": "integer"
+          },
+          "urls": {
+            "type": "object",
+            "description": "Social media URLs keyed by integration ID"
+          },
+          "platformSettings": {
+            "$ref": "#/components/schemas/PlatformSettings"
+          },
+          "createdAt": {
+            "type": "integer"
+          },
+          "updatedAt": {
+            "type": "integer"
+          }
+        }
+      },
+      "GetPostsResponse": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationPost"
+            }
+          },
+          "currentPage": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          },
+          "totalPosts": {
+            "type": "integer"
+          }
+        }
+      },
+      "PublishClipRequest": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "clipId",
+          "integrations"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project containing the clip"
+          },
+          "clipId": {
+            "type": "string",
+            "description": "ID of the clip to publish"
+          },
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of integration IDs to publish to"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "Post title (defaults to clip title)"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Post description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "description": "Post tags (max 10)"
+          },
+          "platformSettings": {
+            "nullable": true,
+            "$ref": "#/components/schemas/PlatformSettings",
+            "description": "Per-platform publishing settings"
+          }
+        }
+      },
+      "ScheduleClipItem": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "clipId"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project"
+          },
+          "clipId": {
+            "type": "string",
+            "description": "ID of the clip"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "Override title for this clip"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Override description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "description": "Override tags"
+          }
+        }
+      },
+      "ScheduleClipsRequest": {
+        "type": "object",
+        "required": [
+          "clips",
+          "integrations",
+          "scheduleDate"
+        ],
+        "properties": {
+          "clips": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleClipItem"
+            },
+            "description": "List of clips to schedule (1-50)"
+          },
+          "integrations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of integration IDs"
+          },
+          "scheduleDate": {
+            "type": "integer",
+            "description": "Unix timestamp for the first clip (min 50 min in future)"
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "default": 300,
+            "description": "Seconds between each clip (min 300)"
+          },
+          "platformSettings": {
+            "nullable": true,
+            "$ref": "#/components/schemas/PlatformSettings",
+            "description": "Per-platform publishing settings"
+          }
+        }
+      },
+      "ScheduleFailedItem": {
+        "type": "object",
+        "properties": {
+          "clipId": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ScheduleClipsResponse": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutomationPost"
+            }
+          },
+          "failed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleFailedItem"
+            }
+          }
+        }
+      },
+      "UpdateProjectRequest": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "title"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "ID of the project to update"
+          },
+          "title": {
+            "type": "string",
+            "description": "New project title (max 80 characters)"
+          }
+        }
+      },
+      "UpdateClipRequest": {
+        "type": "object",
+        "required": [
+          "projectId",
+          "clipId"
+        ],
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "description": "ID of the parent project"
+          },
+          "clipId": {
+            "type": "string",
+            "description": "ID of the clip to update"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "New clip title (max 80 characters)"
+          },
+          "caption": {
+            "type": "string",
+            "nullable": true,
+            "description": "New clip caption (max 250 characters)"
+          }
+        }
+      },
+      "UpdatePostRequest": {
+        "type": "object",
+        "required": [
+          "postId"
+        ],
+        "properties": {
+          "postId": {
+            "type": "string",
+            "description": "ID of the post to update"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "New post title (max 250 characters)"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "New post description (max 1000 characters)"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true,
+            "description": "New post tags (max 10)"
+          },
+          "scheduleDate": {
+            "type": "integer",
+            "nullable": true,
+            "description": "New schedule date (Unix timestamp, min 50 min in future)"
+          },
+          "platformSettings": {
+            "nullable": true,
+            "$ref": "#/components/schemas/PlatformSettings",
+            "description": "Updated platform settings"
+          }
+        }
+      },
+      "DeleteProjectResponse": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "DeleteClipResponse": {
+        "type": "object",
+        "properties": {
+          "clipId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "DeleteUploadResponse": {
+        "type": "object",
+        "properties": {
+          "uploadId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "DeletePostResponse": {
+        "type": "object",
+        "properties": {
+          "postId": {
+            "type": "string"
+          },
+          "deleted": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    }
+  }
+}
