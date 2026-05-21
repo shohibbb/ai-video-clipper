@@ -15,9 +15,9 @@ enum SourceType {
 enum VideoStatus {
   pending
   queued
-  uploading_to_opusclip
-  processing_in_opusclip
-  downloading_clips
+  uploading_to_reap
+  processing_in_reap
+  downloading_from_reap
   storing_clips
   generating_caption
   ready_to_upload
@@ -39,14 +39,15 @@ enum ClipStatus {
 enum UploadStatus {
   queued
   uploading
+  publishing
   completed
   failed
   cancelled
 }
 
 enum JobType {
-  opusclip_process
-  upload_tiktok
+  reap_process
+  reap_publish
   generate_caption
 }
 
@@ -91,6 +92,7 @@ model Video {
   status            VideoStatus @default(pending)
   errorMessage      String?     @map("error_message")
   retryCount        Int         @default(0) @map("retry_count")
+  reapProjectId     String?     @map("reap_project_id")
   clips             Clip[]
   jobs              Job[]
   user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -102,51 +104,58 @@ model Video {
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([userId, updatedAt])
+  @@index([reapProjectId])
   @@map("videos")
 }
 
 model Clip {
-  id             String         @id @default(uuid()) @db.Uuid
-  videoId        String         @map("video_id") @db.Uuid
-  userId         String         @map("user_id") @db.Uuid
-  opusclipClipId String?        @map("opusclip_clip_id")
-  storagePath    String?        @map("storage_path")
-  previewUrl     String?        @map("preview_url")
-  durationSeconds Int?          @map("duration_seconds")
-  title          String?
-  caption        String?
-  hashtags       String[]       @default([])
-  status         ClipStatus     @default(created)
-  uploadTargets  UploadTarget[]
-  jobs           Job[]
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  video          Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
-  createdAt      DateTime       @default(now()) @map("created_at")
-  updatedAt      DateTime       @updatedAt @map("updated_at")
+  id              String         @id @default(uuid()) @db.Uuid
+  videoId         String         @map("video_id") @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+  reapClipId      String?        @map("reap_clip_id")
+  storagePath     String?        @map("storage_path")
+  previewUrl      String?        @map("preview_url")
+  durationSeconds Int?           @map("duration_seconds")
+  title           String?
+  caption         String?
+  hashtags        String[]       @default([])
+  viralityScore   Float?         @map("virality_score")
+  sourceStartTime Float?         @map("source_start_time")
+  sourceEndTime   Float?         @map("source_end_time")
+  status          ClipStatus     @default(created)
+  uploadTargets   UploadTarget[]
+  jobs            Job[]
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video           Video          @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([videoId])
   @@index([status])
   @@index([userId, status])
   @@index([videoId, status])
+  @@index([reapClipId])
   @@map("clips")
 }
 
 model UploadTarget {
-  id            String       @id @default(uuid()) @db.Uuid
-  clipId        String       @map("clip_id") @db.Uuid
-  userId        String       @map("user_id") @db.Uuid
-  platform      String
-  uploadStatus  UploadStatus @default(queued) @map("upload_status")
-  uploadedUrl   String?      @map("uploaded_url")
-  platformResponse Json?     @map("platform_response")
-  scheduledAt   DateTime?    @map("scheduled_at")
-  errorMessage  String?      @map("error_message")
-  retryCount    Int          @default(0) @map("retry_count")
-  clip          Clip         @relation(fields: [clipId], references: [id], onDelete: Cascade)
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt     DateTime     @default(now()) @map("created_at")
-  updatedAt     DateTime     @updatedAt @map("updated_at")
+  id                String       @id @default(uuid()) @db.Uuid
+  clipId            String       @map("clip_id") @db.Uuid
+  userId            String       @map("user_id") @db.Uuid
+  platform          String
+  uploadStatus      UploadStatus @default(queued) @map("upload_status")
+  uploadedUrl       String?      @map("uploaded_url")
+  platformResponse  Json?        @map("platform_response")
+  reapIntegrationId String?      @map("reap_integration_id")
+  reapPostId        String?      @map("reap_post_id")
+  scheduledAt       DateTime?   @map("scheduled_at")
+  errorMessage      String?      @map("error_message")
+  retryCount        Int          @default(0) @map("retry_count")
+  clip              Clip         @relation(fields: [clipId], references: [id], onDelete: Cascade)
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   @@index([userId])
   @@index([clipId])

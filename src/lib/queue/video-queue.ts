@@ -60,7 +60,7 @@ export async function enqueueVideoProcessingJob({
     data: {
       userId,
       videoId,
-      jobType: "opusclip_process",
+      jobType: "reap_process",
       status: "queued",
       maxAttempts: OPUSCLIP_MAX_ATTEMPTS,
     },

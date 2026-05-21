@@ -54,7 +54,7 @@ export async function enqueueClipUploadJob({ userId, clipId, uploadTargetId }: U
     data: {
       userId,
       clipId,
-      jobType: "upload_tiktok",
+      jobType: "reap_publish",
       status: "queued",
       maxAttempts: TIKTOK_UPLOAD_MAX_ATTEMPTS,
     },
