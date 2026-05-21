@@ -125,7 +125,7 @@ export async function processReapVideoJob(job: Job<VideoProcessingJobData>) {
         captionsPreset: config.defaultCaptionsPreset,
         enableEmojis: config.defaultEnableEmojis,
         enableHighlights: config.defaultEnableHighlights,
-        language: config.defaultLanguage,
+        ...(config.defaultLanguage ? { language: config.defaultLanguage } : {}),
       });
 
       reapProjectId = project.id;
@@ -167,7 +167,7 @@ export async function processReapVideoJob(job: Job<VideoProcessingJobData>) {
         captionsPreset: config.defaultCaptionsPreset,
         enableEmojis: config.defaultEnableEmojis,
         enableHighlights: config.defaultEnableHighlights,
-        language: config.defaultLanguage,
+        ...(config.defaultLanguage ? { language: config.defaultLanguage } : {}),
       });
 
       reapProjectId = project.id;
