@@ -5,6 +5,7 @@ import { Queue as BullQueue } from "bullmq";
 import { prisma } from "../src/lib/prisma";
 import { CLIP_UPLOAD_QUEUE_NAME } from "../src/lib/queue/upload-queue";
 import { VIDEO_PROCESSING_QUEUE_NAME } from "../src/lib/queue/video-queue";
+import { REAP_POLLING_QUEUE_NAME } from "../src/lib/queue/reap-polling-queue";
 
 function getTimeoutMs() {
   const value = Number(process.env.WORKER_HEALTHCHECK_TIMEOUT_MS ?? "10000");
@@ -48,18 +49,23 @@ async function main() {
   const redis = createHealthRedisConnection("ai-video-clipper-healthcheck");
   const videoConnection = createHealthRedisConnection("ai-video-clipper-health-video-queue");
   const uploadConnection = createHealthRedisConnection("ai-video-clipper-health-upload-queue");
+  const pollingConnection = createHealthRedisConnection("ai-video-clipper-health-polling-queue");
   const videoQueue = new BullQueue(VIDEO_PROCESSING_QUEUE_NAME, {
     connection: videoConnection,
   });
   const uploadQueue = new BullQueue(CLIP_UPLOAD_QUEUE_NAME, {
     connection: uploadConnection,
   });
+  const pollingQueue = new BullQueue(REAP_POLLING_QUEUE_NAME, {
+    connection: pollingConnection,
+  });
 
   try {
     const redisPing = await withTimeout(redis.ping(), "Redis ping");
-    const [videoProcessing, clipUpload, databaseJobs] = await Promise.all([
+    const [videoProcessing, clipUpload, reapPolling, databaseJobs] = await Promise.all([
       getQueueHealth("video-processing", videoQueue),
       getQueueHealth("clip-upload", uploadQueue),
+      getQueueHealth("reap-polling", pollingQueue),
       withTimeout(
         prisma.job.groupBy({
           by: ["jobType", "status"],
@@ -77,7 +83,7 @@ async function main() {
       redis: {
         ping: redisPing,
       },
-      queues: [videoProcessing, clipUpload],
+      queues: [videoProcessing, clipUpload, reapPolling],
       databaseJobs: databaseJobs.map((row) => ({
         jobType: row.jobType,
         status: row.status,
@@ -103,9 +109,11 @@ async function main() {
   } finally {
     videoQueue.disconnect();
     uploadQueue.disconnect();
+    pollingQueue.disconnect();
     redis.disconnect();
     videoConnection.disconnect();
     uploadConnection.disconnect();
+    pollingConnection.disconnect();
     await prisma.$disconnect();
     process.exit(process.exitCode ?? 0);
   }

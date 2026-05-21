@@ -5,9 +5,10 @@ node_modules/
 .next/
 out/
 
-# playwright
-playwright/.auth/
-playwright/.profiles/
+# playwright (no longer used — kept for reference)
+playwright/
+
+# reap docs (local reference, not part of source)
 artifacts/
 downloads/
 test-results/

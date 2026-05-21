@@ -1,9 +1,7 @@
 import "dotenv/config";
-import { existsSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { Composio } from "@composio/core";
-import { getComposioTikTokConfig } from "../src/lib/composio/config";
-import { getOpusClipConfig } from "../src/lib/opusclip/config";
+import { requireReapApiKey } from "../src/lib/reap/config";
+import { getIntegrations } from "../src/lib/reap/api";
 
 type CheckResult = {
   name: string;
@@ -56,71 +54,69 @@ async function checkSupabase(): Promise<CheckResult> {
   };
 }
 
-function checkOpusClip(): CheckResult {
-  if (process.env.OPUSCLIP_USE_API === "true") {
+async function checkReapApiKey(): Promise<CheckResult> {
+  const apiKey = process.env.REAP_API_KEY;
+
+  if (!hasValue(apiKey)) {
     return {
-      name: "OpusClip API",
-      ok: hasValue(process.env.OPUSCLIP_API_KEY),
-      message: hasValue(process.env.OPUSCLIP_API_KEY)
-        ? "API path is enabled and OPUSCLIP_API_KEY is present. Restart the worker after env changes."
-        : "OPUSCLIP_USE_API=true but OPUSCLIP_API_KEY is missing.",
+      name: "Reap API Key",
+      ok: false,
+      message: "Set REAP_API_KEY in .env.",
     };
   }
 
-  const config = getOpusClipConfig();
-  const sessionExists = existsSync(config.storageStatePath);
-
   return {
-    name: "OpusClip Session",
-    ok: sessionExists,
-    message: sessionExists
-      ? `Saved browser session found at ${config.storageStatePath}.`
-      : `Run npm run opusclip:login, then log in manually. Expected file: ${config.storageStatePath}`,
+    name: "Reap API Key",
+    ok: true,
+    message: "REAP_API_KEY is set.",
   };
 }
 
-async function checkComposio(): Promise<CheckResult> {
-  const config = getComposioTikTokConfig();
-
-  if (!config.apiKey) {
+async function checkReapIntegration(): Promise<CheckResult> {
+  try {
+    requireReapApiKey();
+  } catch {
     return {
-      name: "Composio TikTok",
+      name: "Reap Integration",
       ok: false,
-      message: "Set COMPOSIO_API_KEY in .env.",
+      message: "REAP_API_KEY is not set. Cannot check integrations.",
     };
   }
 
-  const composio = new Composio({
-    apiKey: config.apiKey,
-  });
+  try {
+    const response = await getIntegrations();
+    const tiktokIntegration = response.integrations.find(
+      (i) => i.platform === "tiktok" && i.isActive,
+    );
 
-  const accounts = await composio.connectedAccounts.list();
-  const items = Array.isArray(accounts) ? accounts : "items" in accounts ? accounts.items : [];
-  const activeTikTokAccount = items.find((account) => {
-    const toolkit = "toolkit" in account ? account.toolkit : null;
-    const slug = toolkit && typeof toolkit === "object" && "slug" in toolkit ? toolkit.slug : null;
-    const status = "status" in account ? account.status : null;
+    if (!tiktokIntegration) {
+      return {
+        name: "Reap TikTok Integration",
+        ok: false,
+        message: "No active TikTok integration found. Connect one at https://reap.video/settings/integrations.",
+      };
+    }
 
-    return slug === "tiktok" && status === "ACTIVE";
-  });
-
-  if (!activeTikTokAccount) {
     return {
-      name: "Composio TikTok",
+      name: "Reap TikTok Integration",
+      ok: true,
+      message: `Found active TikTok integration: @${tiktokIntegration.username} (${tiktokIntegration.name}).`,
+    };
+  } catch (error) {
+    return {
+      name: "Reap TikTok Integration",
       ok: false,
-      message: "API key works, but no ACTIVE TikTok connected account was found.",
+      message: `Failed to check Reap integrations: ${error instanceof Error ? error.message : "Unknown error"}.`,
     };
   }
-
-  return {
-    name: "Composio TikTok",
-    ok: true,
-    message: `Found ACTIVE TikTok connected account. Upload action: ${config.uploadToolSlug}.`,
-  };
 }
 
 async function main() {
-  const results = await Promise.allSettled([checkSupabase(), Promise.resolve(checkOpusClip()), checkComposio()]);
+  const results = await Promise.allSettled([
+    checkSupabase(),
+    checkReapApiKey(),
+    checkReapIntegration(),
+  ]);
 
   let ok = true;
 
