@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 import { createJobLogger, logEvent, serializeError } from "@/lib/observability/logger";
-import { createQueueRedisConnection } from "@/lib/queue/redis";
+import { createWorkerRedisConnection } from "@/lib/queue/redis";
 import { prisma } from "@/lib/prisma";
 import {
   REAP_POLLING_QUEUE_NAME,
@@ -197,7 +197,7 @@ export async function processReapPollingJob(job: { data: ReapPollingJobData; id?
 
 export function startReapPollingWorker(concurrency = 1) {
   const worker = new Worker<ReapPollingJobData>(REAP_POLLING_QUEUE_NAME, processReapPollingJob, {
-    connection: createQueueRedisConnection(),
+    connection: createWorkerRedisConnection(),
     concurrency,
   });
 
