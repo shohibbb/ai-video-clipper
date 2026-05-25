@@ -58,7 +58,7 @@ export async function enqueueReapPollingJob({
       userId,
       videoId,
       jobType: "reap_process",
-      status: "active",
+      status: "queued",
       maxAttempts: REAP_POLLING_MAX_ATTEMPTS,
     },
   });

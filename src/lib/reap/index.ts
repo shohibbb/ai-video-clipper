@@ -11,6 +11,7 @@ export {
   getClipDetails,
   getIntegrations,
   publishClip,
+  getPostDetails,
   updateClip,
   deleteProject,
   deleteClip,

@@ -110,6 +110,10 @@ export async function publishClip(params: ReapPublishClipRequest): Promise<ReapP
   });
 }
 
+export async function getPostDetails(postId: string): Promise<ReapPost> {
+  return reapRequest<ReapPost>(`/get-post-details?postId=${encodeURIComponent(postId)}`);
+}
+
 export async function updateClip(params: ReapUpdateClipRequest): Promise<ReapClip> {
   return reapRequest<ReapClip>("/update-clip", {
     method: "POST",
