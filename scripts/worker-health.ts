@@ -3,6 +3,7 @@ import IORedis from "ioredis";
 import type { Queue } from "bullmq";
 import { Queue as BullQueue } from "bullmq";
 import { prisma } from "../src/lib/prisma";
+import { REAP_PUBLISH_STATUS_QUEUE_NAME } from "../src/lib/queue/reap-publish-status-queue";
 import { CLIP_UPLOAD_QUEUE_NAME } from "../src/lib/queue/upload-queue";
 import { VIDEO_PROCESSING_QUEUE_NAME } from "../src/lib/queue/video-queue";
 import { REAP_POLLING_QUEUE_NAME } from "../src/lib/queue/reap-polling-queue";
@@ -50,6 +51,7 @@ async function main() {
   const videoConnection = createHealthRedisConnection("ai-video-clipper-health-video-queue");
   const uploadConnection = createHealthRedisConnection("ai-video-clipper-health-upload-queue");
   const pollingConnection = createHealthRedisConnection("ai-video-clipper-health-polling-queue");
+  const publishStatusConnection = createHealthRedisConnection("ai-video-clipper-health-publish-status-queue");
   const videoQueue = new BullQueue(VIDEO_PROCESSING_QUEUE_NAME, {
     connection: videoConnection,
   });
@@ -59,13 +61,17 @@ async function main() {
   const pollingQueue = new BullQueue(REAP_POLLING_QUEUE_NAME, {
     connection: pollingConnection,
   });
+  const publishStatusQueue = new BullQueue(REAP_PUBLISH_STATUS_QUEUE_NAME, {
+    connection: publishStatusConnection,
+  });
 
   try {
     const redisPing = await withTimeout(redis.ping(), "Redis ping");
-    const [videoProcessing, clipUpload, reapPolling, databaseJobs] = await Promise.all([
+    const [videoProcessing, clipUpload, reapPolling, reapPublishStatus, databaseJobs] = await Promise.all([
       getQueueHealth("video-processing", videoQueue),
       getQueueHealth("clip-upload", uploadQueue),
       getQueueHealth("reap-polling", pollingQueue),
+      getQueueHealth("reap-publish-status", publishStatusQueue),
       withTimeout(
         prisma.job.groupBy({
           by: ["jobType", "status"],
@@ -83,7 +89,7 @@ async function main() {
       redis: {
         ping: redisPing,
       },
-      queues: [videoProcessing, clipUpload, reapPolling],
+      queues: [videoProcessing, clipUpload, reapPolling, reapPublishStatus],
       databaseJobs: databaseJobs.map((row) => ({
         jobType: row.jobType,
         status: row.status,
@@ -110,10 +116,12 @@ async function main() {
     videoQueue.disconnect();
     uploadQueue.disconnect();
     pollingQueue.disconnect();
+    publishStatusQueue.disconnect();
     redis.disconnect();
     videoConnection.disconnect();
     uploadConnection.disconnect();
     pollingConnection.disconnect();
+    publishStatusConnection.disconnect();
     await prisma.$disconnect();
     process.exit(process.exitCode ?? 0);
   }

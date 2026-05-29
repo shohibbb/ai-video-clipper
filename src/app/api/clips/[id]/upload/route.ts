@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { requireCurrentUser } from "@/lib/auth";
 import { uploadClipRequestSchema, validationErrorResponse } from "@/lib/api/validation";
 import { enqueueClipUploadJob } from "@/lib/queue/upload-queue";
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       userId: user.id,
       platform,
       uploadStatus: {
-        in: ["queued", "uploading"],
+        in: ["queued", "uploading", "publishing"],
       },
     },
     orderBy: {
@@ -68,14 +69,28 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  const uploadTarget = await prisma.uploadTarget.create({
-    data: {
-      clipId: clip.id,
-      userId: user.id,
-      platform,
-      uploadStatus: "queued",
-    },
-  });
+  let uploadTarget;
+  try {
+    uploadTarget = await prisma.uploadTarget.create({
+      data: {
+        clipId: clip.id,
+        userId: user.id,
+        platform,
+        uploadStatus: "queued",
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      return NextResponse.json(
+        {
+          error: "This clip already has a TikTok upload queued or in progress.",
+        },
+        { status: 409 },
+      );
+    }
+
+    throw error;
+  }
 
   try {
     await prisma.clip.update({

@@ -1,30 +1,23 @@
 import type { Job } from "bullmq";
-import { createJobLogger, serializeError, toJsonValue } from "@/lib/observability/logger";
+import { createJobLogger, serializeError } from "@/lib/observability/logger";
 import { prisma } from "@/lib/prisma";
+import { enqueueReapPublishStatusJob } from "@/lib/queue/reap-publish-status-queue";
 import { TIKTOK_UPLOAD_MAX_ATTEMPTS } from "@/lib/queue/upload-queue";
 import type { ClipUploadJobData } from "@/lib/queue/upload-queue";
 import { getIntegrations, getPostDetails, publishClip, ReapApiError, type ReapPost } from "@/lib/reap";
+import {
+  isReapPostPending,
+  isTikTokPostCompleted,
+  isTikTokPostFailed,
+  markUploadCompleted,
+  recordPublishingPost,
+} from "@/lib/services/reap-publish";
 
-class ReapPostStillProcessingError extends Error {
-  constructor(public post: ReapPost) {
-    super(`Reap post ${post.id} is still ${post.status}. BullMQ will check it again without creating a new post.`);
-    this.name = "ReapPostStillProcessingError";
+class TerminalReapPublishError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TerminalReapPublishError";
   }
-}
-
-function isTikTokPostCompleted(post: ReapPost) {
-  return post.status === "completed" && post.successPlatforms.includes("tiktok");
-}
-
-function isTikTokPostFailed(post: ReapPost) {
-  return (
-    ["failed", "cancelled", "unresolved"].includes(post.status) ||
-    (post.failedPlatforms.includes("tiktok") && !post.successPlatforms.includes("tiktok"))
-  );
-}
-
-function isReapPostPending(post: ReapPost) {
-  return post.status === "processing" || post.status === "draft";
 }
 
 export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
@@ -180,15 +173,7 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
 
     await job.updateProgress(80);
 
-    await prisma.uploadTarget.update({
-      where: { id: uploadTargetId },
-      data: {
-        uploadStatus: "publishing",
-        reapPostId: post.id,
-        platformResponse: toJsonValue(post),
-        errorMessage: null,
-      },
-    });
+    await recordPublishingPost(uploadTargetId, post);
 
     await logger.info("Reap post status received.", {
       phase: 6,
@@ -203,9 +188,23 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
     if (isTikTokPostCompleted(post)) {
       await markUploadCompleted(uploadTargetId, clip, post);
     } else if (isTikTokPostFailed(post)) {
-      throw new Error(`Reap publish failed for TikTok. Post status: ${post.status}. Failed platforms: ${post.failedPlatforms.join(", ")}`);
+      const errorMessage = `Reap publish failed for TikTok. Post status: ${post.status}. Failed platforms: ${post.failedPlatforms.join(", ")}`;
+      throw new TerminalReapPublishError(errorMessage);
     } else if (isReapPostPending(post)) {
-      throw new ReapPostStillProcessingError(post);
+      await enqueueReapPublishStatusJob({
+        userId,
+        clipId,
+        uploadTargetId,
+        reapPostId: post.id,
+      });
+
+      await logger.info("Reap post still processing; status polling job enqueued.", {
+        phase: 6,
+        clipId,
+        uploadTargetId,
+        reapPostId: post.id,
+        postStatus: post.status,
+      });
     } else {
       throw new Error(`Unexpected Reap post status for TikTok publish: ${post.status}.`);
     }
@@ -229,32 +228,21 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
       status: post.status,
     };
   } catch (error) {
-    const isStillProcessing = error instanceof ReapPostStillProcessingError;
     const errorMessage = error instanceof Error ? error.message : "Unknown Reap publish worker error.";
-    const willRetry = attempt < maxAttempts;
+    const willRetry = !(error instanceof TerminalReapPublishError) && attempt < maxAttempts;
 
-    if (isStillProcessing && willRetry) {
-      await prisma.uploadTarget.update({
-        where: { id: uploadTargetId },
-        data: {
-          uploadStatus: "publishing",
-          errorMessage,
-        },
-      });
-    } else {
-      await prisma.uploadTarget.update({
-        where: { id: uploadTargetId },
-        data: {
-          uploadStatus: willRetry ? "queued" : "failed",
-          errorMessage,
-          retryCount: { increment: 1 },
-        },
-      });
-    }
+    await prisma.uploadTarget.update({
+      where: { id: uploadTargetId },
+      data: {
+        uploadStatus: willRetry ? "queued" : "failed",
+        errorMessage,
+        retryCount: { increment: 1 },
+      },
+    });
 
     await prisma.clip.update({
       where: { id: clipId },
-      data: { status: isStillProcessing && willRetry ? "uploading" : willRetry ? "ready_to_upload" : "failed" },
+      data: { status: willRetry ? "ready_to_upload" : "failed" },
     }).catch(() => {});
 
     const clipRecord = await prisma.clip.findUnique({ where: { id: clipId } });
@@ -262,7 +250,7 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
       await prisma.video.update({
         where: { id: clipRecord.videoId },
         data: {
-          status: isStillProcessing && willRetry ? "uploading_to_tiktok" : willRetry ? "ready_to_upload" : "failed",
+          status: willRetry ? "ready_to_upload" : "failed",
           errorMessage,
         },
       }).catch(() => {});
@@ -278,66 +266,24 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
       },
     });
 
-    const logDetails = {
-      phase: 6,
-      attempt,
-      maxAttempts,
-      willRetry,
-      clipId,
-      uploadTargetId,
-      errorMessage,
-      error: serializeError(error),
-      isReapApiError: error instanceof ReapApiError,
-      reapApiStatus: error instanceof ReapApiError ? error.status : undefined,
-      reapPostId: isStillProcessing ? error.post.id : undefined,
-    };
-
-    if (isStillProcessing && willRetry) {
-      await logger.info("Reap post is still processing; BullMQ will poll it again.", logDetails);
-    } else {
-      await logger.error(
-        willRetry
-          ? "Reap publish attempt failed; BullMQ will retry."
-          : "Reap publish failed after final attempt.",
-        logDetails,
-      );
-    }
+    await logger.error(
+      willRetry
+        ? "Reap publish attempt failed; BullMQ will retry."
+        : "Reap publish failed after final attempt.",
+      {
+        phase: 6,
+        attempt,
+        maxAttempts,
+        willRetry,
+        clipId,
+        uploadTargetId,
+        errorMessage,
+        error: serializeError(error),
+        isReapApiError: error instanceof ReapApiError,
+        reapApiStatus: error instanceof ReapApiError ? error.status : undefined,
+      },
+    );
 
     throw error;
   }
-}
-
-async function markUploadCompleted(
-  uploadTargetId: string,
-  clip: { id: string; videoId: string },
-  post: { id: string; urls?: Record<string, string> },
-) {
-  const tiktokUrl = post.urls?.tiktok ?? null;
-
-  await prisma.uploadTarget.update({
-    where: { id: uploadTargetId },
-    data: {
-      uploadStatus: "completed",
-      uploadedUrl: tiktokUrl,
-      errorMessage: null,
-    },
-  });
-
-  await prisma.clip.update({
-    where: { id: clip.id },
-    data: { status: "uploaded" },
-  });
-
-  const [totalClips, uploadedClips] = await prisma.$transaction([
-    prisma.clip.count({ where: { videoId: clip.videoId } }),
-    prisma.clip.count({ where: { videoId: clip.videoId, status: "uploaded" } }),
-  ]);
-
-  await prisma.video.update({
-    where: { id: clip.videoId },
-    data: {
-      status: totalClips > 0 && totalClips === uploadedClips ? "completed" : "ready_to_upload",
-      errorMessage: null,
-    },
-  });
 }

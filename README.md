@@ -99,15 +99,21 @@ This repository is through **Phase 8** (all Reap migration complete):
     npm run worker:reap-publish
     ```
 
-12. In a fourth terminal, start the Reap polling worker (fallback when webhooks are not available):
+12. In a fourth terminal, start the Reap publish status worker:
+
+    ```bash
+    npm run worker:reap-publish-status
+    ```
+
+13. In a fifth terminal, start the Reap polling worker (fallback when webhooks are not available):
 
     ```bash
     npm run worker:reap-polling
     ```
 
-13. Open `http://localhost:3000/dashboard`.
+14. Open `http://localhost:3000/dashboard`.
 
-14. Check queue and worker health when debugging:
+15. Check queue and worker health when debugging:
 
     ```bash
     npm run worker:health
@@ -174,6 +180,7 @@ npm run prisma:studio
 npm run worker:reap
 npm run worker:reap-polling
 npm run worker:reap-publish
+npm run worker:reap-publish-status
 npm run worker:health
 npm run setup:check
 ```
@@ -217,13 +224,15 @@ Reap Publish Worker → Reap API → TikTok
 - Uploaded source videos are stored at `users/{userId}/videos/{videoId}/source.{ext}` and saved to `videos.source_storage_path`.
 - Video processing jobs are enqueued in BullMQ using `REDIS_URL`.
 - `npm run worker:reap` starts the worker that uploads source videos to Reap and creates clip projects.
-- `POST /api/reap/webhook` receives Reap project completion callbacks, downloads clips, stores them, and creates `Clip` records.
+- `POST /api/reap/webhook` receives Reap project completion callbacks and queues clip download work.
 - `npm run worker:reap-polling` polls Reap for project status when webhooks are unavailable.
 - `/videos/:id` shows clip previews and editable title, caption, and hashtag metadata when clip rows exist.
 - `POST /api/clips/:id/generate-caption` uses a safe placeholder caption service. If `OPENAI_API_KEY` is missing, it returns and stores a clear placeholder response instead of calling an external API.
 - `POST /api/clips/:id/upload` validates the clip has a Reap clip ID, creates an `UploadTarget`, and queues a TikTok publish job.
 - `npm run worker:reap-publish` starts the dedicated Reap TikTok publish worker with default concurrency `1`.
+- `npm run worker:reap-publish-status` polls Reap post status after TikTok publishing has started.
 - The publish worker retries failed TikTok uploads up to 3 attempts with a 5 minute fixed delay.
+- Reap API calls are globally rate-limited through Redis by `REAP_RATE_LIMIT_MAX_REQUESTS` and `REAP_RATE_LIMIT_WINDOW_MS`.
 - `npm run worker:health` prints Redis ping status, BullMQ queue counts, and database job counts.
 - API JSON request bodies use Zod validation and return field-level validation details.
 - Dashboard and video ledger pages show live database-backed error states and retry buttons.

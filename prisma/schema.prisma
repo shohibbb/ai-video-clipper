@@ -48,6 +48,7 @@ enum UploadStatus {
 enum JobType {
   reap_process
   reap_publish
+  reap_publish_status
   generate_caption
 }
 
@@ -136,6 +137,7 @@ model Clip {
   @@index([userId, status])
   @@index([videoId, status])
   @@index([reapClipId])
+  @@unique([videoId, reapClipId], map: "clips_video_id_reap_clip_id_key")
   @@map("clips")
 }
 
@@ -163,6 +165,7 @@ model UploadTarget {
   @@index([uploadStatus])
   @@index([userId, uploadStatus])
   @@index([clipId, platform, uploadStatus])
+  @@index([reapPostId])
   @@map("upload_targets")
 }
 

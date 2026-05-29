@@ -10,6 +10,7 @@
     "worker:reap": "tsx -r dotenv/config workers/reap-worker/index.ts",
     "worker:reap-polling": "tsx -r dotenv/config workers/reap-polling-worker/index.ts",
     "worker:reap-publish": "tsx -r dotenv/config workers/reap-publish-worker/index.ts",
+    "worker:reap-publish-status": "tsx -r dotenv/config workers/reap-publish-status-worker/index.ts",
     "worker:health": "tsx -r dotenv/config scripts/worker-health.ts",
     "setup:check": "tsx -r dotenv/config scripts/check-integrations.ts",
     "prisma:generate": "prisma generate",

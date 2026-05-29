@@ -1,4 +1,5 @@
 import { getReapConfig, requireReapApiKey } from "@/lib/reap/config";
+import { waitForReapRateLimit } from "@/lib/reap/rate-limit";
 import type {
   ReapClip,
   ReapCreateClipsRequest,
@@ -29,6 +30,8 @@ async function reapRequest<T>(path: string, options: RequestInit = {}): Promise<
   const config = getReapConfig();
   const apiKey = requireReapApiKey();
   const url = path.startsWith("http") ? path : `${config.baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+
+  await waitForReapRateLimit(apiKey);
 
   const response = await fetch(url, {
     ...options,
