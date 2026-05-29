@@ -211,7 +211,7 @@ export type ReapWebhookPayload = {
   projectId: string;
   projectType: ReapProjectType;
   source: ReapSource;
-  status: "completed" | "invalid" | "expired";
+  status: ReapProjectStatus;
 };
 
 export type ReapDeleteResponse = {

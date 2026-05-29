@@ -3,6 +3,7 @@ import { logEvent, serializeError } from "@/lib/observability/logger";
 import { prisma } from "@/lib/prisma";
 import { enqueueReapPollingJob } from "@/lib/queue/reap-polling-queue";
 import type { ReapProjectStatus, ReapWebhookPayload } from "@/lib/reap/types";
+import { getReapWebhookSecurityConfig, verifyReapWebhookRequest } from "@/lib/reap/webhook-security";
 
 const REAP_COMPLETED_STATUSES: ReapProjectStatus[] = ["completed"];
 const REAP_FAILED_STATUSES: ReapProjectStatus[] = ["invalid", "expired", "failed", "error"];
@@ -12,9 +13,29 @@ const REAP_FAILED_STATUSES: ReapProjectStatus[] = ["invalid", "expired", "failed
  * Keep this handler short: it acknowledges Reap, records state, and lets workers do long-running work.
  */
 export async function POST(request: Request) {
+  const body = await request.text();
+  const verification = verifyReapWebhookRequest({
+    body,
+    headers: request.headers,
+    url: request.url,
+    ...getReapWebhookSecurityConfig(),
+  });
+
+  if (!verification.ok) {
+    await logEvent({
+      level: "warning",
+      event: "reap.webhook.rejected",
+      component: "reap-webhook",
+      message: "Rejected Reap webhook request.",
+      metadata: { reason: verification.reason },
+    });
+
+    return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+  }
+
   let payload: ReapWebhookPayload;
   try {
-    payload = await request.json();
+    payload = JSON.parse(body) as ReapWebhookPayload;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }

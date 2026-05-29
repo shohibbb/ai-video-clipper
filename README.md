@@ -128,6 +128,12 @@ This repository is through **Phase 8** (all Reap migration complete):
     npm run worker:health
     ```
 
+17. Before deploying to staging or production, run the static production preflight:
+
+    ```bash
+    npm run production:check
+    ```
+
 ## Reap Setup
 
 1. Sign up at [reap.video](https://reap.video) and get your API key.
@@ -161,7 +167,24 @@ Reap sends webhooks when projects complete. For production:
    https://your-domain.com/api/reap/webhook
    ```
 
-2. The webhook handler downloads clips, stores them, and updates the video status to `ready_to_upload`.
+2. Set `REAP_WEBHOOK_SECRET` in your app environment.
+
+3. Prefer HMAC verification if Reap can send a signature header. The handler accepts these signature headers:
+   - `x-reap-signature`
+   - `reap-signature`
+   - `x-webhook-signature`
+   - `x-signature`
+
+   Accepted signature values are raw SHA-256 hex, `sha256=<hex>`, or `v1=<hex>` over the raw request body. If a timestamp header is present, the handler also accepts signatures over `<timestamp>.<rawBody>`.
+
+4. If Reap cannot send custom headers, configure the webhook URL with a shared secret query parameter:
+   ```
+   https://your-domain.com/api/reap/webhook?reap_webhook_secret=your_long_random_secret
+   ```
+
+5. Set `REAP_WEBHOOK_REQUIRE_TIMESTAMP=true` only when Reap sends timestamped webhook signatures. Keep it `false` otherwise so valid Reap callbacks are not rejected.
+
+6. The webhook handler acknowledges Reap quickly, queues clip download work, and lets the polling worker/store service perform long-running operations.
 
 ## Polling Fallback (Development)
 
@@ -192,6 +215,7 @@ npm run worker:reap-publish
 npm run worker:reap-publish-status
 npm run worker:health
 npm run setup:check
+npm run production:check
 ```
 
 ## Troubleshooting
@@ -251,7 +275,9 @@ Reap Publish Worker → Reap API → TikTok
 ## TODO Before Production
 
 - Production deployment: add secrets management, managed Redis/Postgres, worker process supervision, migrations, backups, and observability dashboards.
+- Run `npm run production:check` in staging/production deploy pipelines before `next build`.
 - Auth hardening: configure OAuth providers, rotate `NEXTAUTH_SECRET`, and keep `ALLOW_DEV_AUTH` disabled outside local/internal development.
+- Webhook hardening: set `REAP_WEBHOOK_SECRET`; enable timestamp verification only when Reap sends timestamped signatures.
 - Compliance review: review Reap and TikTok terms, consent, rate limits, content policy, and data retention before external or high-volume use.
 - Webhook URL: configure a stable HTTPS webhook endpoint for Reap callbacks.
 - TikTok integration monitoring: periodically verify the TikTok connection in Reap dashboard remains active.

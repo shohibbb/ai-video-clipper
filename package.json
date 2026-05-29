@@ -15,6 +15,7 @@
     "worker:reap-publish-status": "tsx -r dotenv/config workers/reap-publish-status-worker/index.ts",
     "worker:health": "tsx -r dotenv/config scripts/worker-health.ts",
     "setup:check": "tsx -r dotenv/config scripts/check-integrations.ts",
+    "production:check": "tsx -r dotenv/config scripts/check-production.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
