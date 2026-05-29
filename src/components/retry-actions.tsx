@@ -11,8 +11,8 @@ type RetryButtonProps = {
 
 function buttonClassName(compact: boolean) {
   return compact
-    ? "rounded-full border border-[#d45f47] bg-[#ffe4dc] px-4 py-2 text-sm font-black text-[#8a2d1d] transition hover:-translate-y-0.5 hover:bg-[#ffd2c5] disabled:cursor-not-allowed disabled:opacity-60"
-    : "rounded-2xl bg-[color:var(--ember)] px-5 py-3 font-black text-[#fffaf0] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60";
+    ? "inline-flex items-center justify-center rounded-lg border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-2 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.16em] text-[#ffb4ab] transition hover:-translate-y-0.5 hover:bg-[rgba(255,180,171,0.18)] disabled:cursor-not-allowed disabled:opacity-60"
+    : "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0";
 }
 
 export function RetryVideoButton({ id, label = "Retry video task", compact = false }: RetryButtonProps) {
@@ -48,7 +48,7 @@ export function RetryVideoButton({ id, label = "Retry video task", compact = fal
       <button type="button" onClick={retry} disabled={busy} className={buttonClassName(compact)}>
         {busy ? "Retrying..." : label}
       </button>
-      {error ? <p className="text-xs font-bold text-[#8a2d1d]">{error}</p> : null}
+      {error ? <p className="text-xs font-bold text-[#ffb4ab]">{error}</p> : null}
     </div>
   );
 }
@@ -92,7 +92,7 @@ export function RetryClipUploadButton({ id, label = "Retry TikTok upload", compa
       <button type="button" onClick={retry} disabled={busy} className={buttonClassName(compact)}>
         {busy ? "Queueing..." : label}
       </button>
-      {error ? <p className="text-xs font-bold text-[#8a2d1d]">{error}</p> : null}
+      {error ? <p className="text-xs font-bold text-[#ffb4ab]">{error}</p> : null}
     </div>
   );
 }

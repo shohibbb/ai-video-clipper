@@ -108,32 +108,32 @@ export function ClipMetadataEditor({ clip }: { clip: ClipMetadata }) {
   return (
     <form onSubmit={saveMetadata} className="grid gap-4">
       <label className="grid gap-2">
-        <span className="text-xs font-black uppercase tracking-[0.24em] text-[color:var(--moss)]">Title</span>
+        <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Title</span>
         <input
           value={metadata.title}
           onChange={(event) => setMetadata((current) => ({ ...current, title: event.target.value }))}
-          className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+          className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           placeholder="A sharp title for this short"
         />
       </label>
 
       <label className="grid gap-2">
-        <span className="text-xs font-black uppercase tracking-[0.24em] text-[color:var(--moss)]">Caption</span>
+        <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Caption</span>
         <textarea
           value={metadata.caption}
           onChange={(event) => setMetadata((current) => ({ ...current, caption: event.target.value }))}
           rows={5}
-          className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+          className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           placeholder="Hook, takeaway, call to action..."
         />
       </label>
 
       <label className="grid gap-2">
-        <span className="text-xs font-black uppercase tracking-[0.24em] text-[color:var(--moss)]">Hashtags</span>
+        <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Hashtags</span>
         <input
           value={metadata.hashtags}
           onChange={(event) => setMetadata((current) => ({ ...current, hashtags: event.target.value }))}
-          className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+          className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           placeholder="#shorts, #ai, #creator"
         />
       </label>
@@ -142,7 +142,7 @@ export function ClipMetadataEditor({ clip }: { clip: ClipMetadata }) {
         <button
           type="submit"
           disabled={busy}
-          className="flex-1 rounded-2xl bg-[color:var(--ink)] px-5 py-3 font-black text-[#fffaf0] transition hover:-translate-y-0.5 hover:bg-[color:var(--ember)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {action === "save" ? "Saving..." : "Save metadata"}
         </button>
@@ -150,14 +150,14 @@ export function ClipMetadataEditor({ clip }: { clip: ClipMetadata }) {
           type="button"
           onClick={generateCaption}
           disabled={busy}
-          className="flex-1 rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-5 py-3 font-black text-[color:var(--steel)] transition hover:-translate-y-0.5 hover:border-[color:var(--ember)] hover:text-[color:var(--ember)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-2.5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.16em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[rgba(223,254,0,0.42)] hover:text-[#dffe00] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {action === "generate" ? "Generating..." : "Generate caption"}
         </button>
       </div>
 
-      {message ? <p className="rounded-2xl border border-[#6c8b53] bg-[#e6efdf] px-4 py-3 text-sm font-bold text-[#39502d]">{message}</p> : null}
-      {error ? <p className="rounded-2xl border border-[#d45f47] bg-[#ffe4dc] px-4 py-3 text-sm font-bold text-[#8a2d1d]">{error}</p> : null}
+      {message ? <p className="rounded-lg border border-[#39ff14] bg-[rgba(57,255,20,0.10)] px-4 py-3 text-sm font-bold text-[#39ff14]">{message}</p> : null}
+      {error ? <p className="rounded-lg border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-3 text-sm font-bold text-[#ffb4ab]">{error}</p> : null}
     </form>
   );
 }

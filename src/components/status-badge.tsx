@@ -1,23 +1,23 @@
 const statusStyles: Record<string, string> = {
-  pending: "border-[#c49d3c] bg-[#fff4cc] text-[#6f5010]",
-  queued: "border-[#7b8da8] bg-[#e8eef7] text-[#273746]",
-  active: "border-[#273746] bg-[#e8eef7] text-[#273746]",
-  completed: "border-[#6c8b53] bg-[#e6efdf] text-[#39502d]",
-  failed: "border-[#d45f47] bg-[#ffe4dc] text-[#8a2d1d]",
-  created: "border-[#7b8da8] bg-[#e8eef7] text-[#273746]",
-  stored: "border-[#6c8b53] bg-[#e6efdf] text-[#39502d]",
-  uploading: "border-[#273746] bg-[#e8eef7] text-[#273746]",
-  uploaded: "border-[#6c8b53] bg-[#e6efdf] text-[#39502d]",
-  cancelled: "border-[#7b8da8] bg-[#e8eef7] text-[#273746]",
-  publishing: "border-[#273746] bg-[#e8eef7] text-[#273746]",
-  "not queued": "border-[color:var(--line)] bg-[#fffaf0] text-[color:var(--muted)]",
-  uploading_to_reap: "border-[#273746] bg-[#e8eef7] text-[#273746]",
-  processing_in_reap: "border-[#273746] bg-[#e8eef7] text-[#273746]",
-  downloading_from_reap: "border-[#c49d3c] bg-[#fff4cc] text-[#6f5010]",
-  storing_clips: "border-[#c49d3c] bg-[#fff4cc] text-[#6f5010]",
-  generating_caption: "border-[#c49d3c] bg-[#fff4cc] text-[#6f5010]",
-  ready_to_upload: "border-[#516a43] bg-[#e6efdf] text-[#39502d]",
-  uploading_to_tiktok: "border-[#273746] bg-[#e8eef7] text-[#273746]",
+  pending: "border-[#909378] bg-[rgba(144,147,120,0.15)] text-[#c6c9ab]",
+  queued: "border-[#909378] bg-[rgba(144,147,120,0.15)] text-[#c6c9ab]",
+  active: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  completed: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  failed: "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] text-[#ffb4ab]",
+  created: "border-[#909378] bg-[rgba(144,147,120,0.15)] text-[#c6c9ab]",
+  stored: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  uploading: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  uploaded: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  cancelled: "border-[#909378] bg-[rgba(144,147,120,0.15)] text-[#c6c9ab]",
+  publishing: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  "not queued": "border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] text-[#909378]",
+  uploading_to_reap: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  processing_in_reap: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  downloading_from_reap: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  storing_clips: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  generating_caption: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
+  ready_to_upload: "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]",
+  uploading_to_tiktok: "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-[#dffe00]",
 };
 
 export function StatusBadge({ status }: { status: string }) {
@@ -34,8 +34,8 @@ export function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.18em] ${
-        dynamicStyle ?? "border-[color:var(--line)] bg-[#fffaf0] text-[color:var(--muted)]"
+      className={`inline-flex items-center rounded-full border px-3 py-1.5 font-[family-name:var(--font-mono)] text-[10px] font-bold uppercase tracking-[0.18em] ${
+        dynamicStyle ?? "border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] text-[#909378]"
       }`}
     >
       {status.replaceAll("_", " ")}

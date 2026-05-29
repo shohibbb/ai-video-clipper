@@ -14,8 +14,8 @@ export function ClipPreview({
   previewError?: string | null;
 }) {
   return (
-    <div className="w-full max-w-[13rem] self-start justify-self-center overflow-hidden rounded-[1.75rem] border border-[color:var(--line)] bg-[color:var(--ink)] text-[#fffaf0] shadow-[0_24px_70px_rgba(30,26,21,0.18)] lg:justify-self-start">
-      <div className="relative aspect-[9/16] overflow-hidden bg-[radial-gradient(circle_at_30%_20%,rgba(232,85,47,0.35),transparent_32%),linear-gradient(160deg,#1e1a15,#273746)]">
+    <div className="w-full max-w-[13rem] self-start justify-self-center overflow-hidden rounded-xl border border-[rgba(223,254,0,0.15)] bg-[#0b0a09] text-[#e2e2e1] shadow-[0_24px_70px_rgba(0,0,0,0.40)] lg:justify-self-start">
+      <div className="relative aspect-[9/16] overflow-hidden bg-[linear-gradient(160deg,#0b0a09,#1e2020)]">
         {previewUrl ? (
           <video
             src={previewUrl}
@@ -31,13 +31,13 @@ export function ClipPreview({
               <StatusBadge status={status} />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.34em] text-[#f2a17f]">Preview pending</p>
-              <h3 className="mt-3 text-3xl font-black tracking-[-0.06em]">{title || "Clip preview"}</h3>
-              <p className="mt-4 text-sm leading-6 text-[#e8ddc8]">
+              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Preview pending</p>
+              <h3 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em]">{title || "Clip preview"}</h3>
+              <p className="mt-4 text-sm leading-6 text-[#c6c9ab]">
                 {previewError || "No preview URL is available yet. Once storage paths or signed URLs are ready, the clip will play here."}
               </p>
             </div>
-            <p className="break-all text-xs text-[#cdbf9e]">{storagePath || "No storage path yet"}</p>
+            <p className="break-all font-[family-name:var(--font-mono)] text-[13px] font-medium leading-[18px] text-[#909378]">{storagePath || "No storage path yet"}</p>
           </div>
         )}
       </div>

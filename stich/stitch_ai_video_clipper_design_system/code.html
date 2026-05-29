@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AI Video Clipper | Operator Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Be+Vietnam+Pro:wght@700;800;900&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Shared Components JSON Logic & Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#2c3400",
+                        "surface-container-lowest": "#0c0f0e",
+                        "inverse-on-surface": "#2f3130",
+                        "on-background": "#e2e2e1",
+                        "secondary-fixed": "#79ff5b",
+                        "secondary-container": "#2ff801",
+                        "on-secondary-container": "#0f6d00",
+                        "surface": "#121414",
+                        "inverse-surface": "#e2e2e1",
+                        "on-tertiary-fixed": "#121c2a",
+                        "surface-tint": "#b9d300",
+                        "surface-container-high": "#282a2a",
+                        "on-tertiary": "#27313f",
+                        "primary-fixed-dim": "#b9d300",
+                        "secondary": "#d7ffc5",
+                        "on-tertiary-container": "#5b6575",
+                        "inverse-primary": "#576400",
+                        "on-surface": "#e2e2e1",
+                        "background": "#0B0A09", /* Custom Obsidian Canvas */
+                        "surface-variant": "#333535",
+                        "surface-dim": "#121414",
+                        "on-error": "#690005",
+                        "on-secondary-fixed-variant": "#095300",
+                        "tertiary-container": "#d9e3f6",
+                        "on-primary-container": "#5d6b00",
+                        "on-error-container": "#ffdad6",
+                        "surface-container-low": "#1a1c1c",
+                        "error": "#ffb4ab",
+                        "surface-container": "#1e2020",
+                        "on-secondary": "#053900",
+                        "primary": "#DFFE00", /* Neon Lime Accent */
+                        "outline": "#909378",
+                        "secondary-fixed-dim": "#2ae500",
+                        "primary-container": "#d3f000",
+                        "error-container": "#93000a",
+                        "on-primary-fixed-variant": "#414c00",
+                        "tertiary": "#ffffff",
+                        "surface-bright": "#383939",
+                        "primary-fixed": "#d3f000",
+                        "tertiary-fixed": "#d9e3f6",
+                        "surface-container-highest": "#333535",
+                        "on-tertiary-fixed-variant": "#3d4756",
+                        "on-surface-variant": "#c6c9ab",
+                        "on-primary-fixed": "#191e00",
+                        "tertiary-fixed-dim": "#bdc7d9",
+                        "on-secondary-fixed": "#022100",
+                        "outline-variant": "#454932"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "2xl": "48px",
+                        "margin-mobile": "20px",
+                        "gutter": "20px",
+                        "xl": "32px",
+                        "lg": "24px",
+                        "unit": "4px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-xl": ["Be Vietnam Pro"],
+                        "headline-lg": ["Be Vietnam Pro"],
+                        "headline-sm": ["Be Vietnam Pro"],
+                        "headline-md": ["Be Vietnam Pro"],
+                        "label-mono": ["JetBrains Mono"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["JetBrains Mono"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-xl": ["72px", {"lineHeight": "80px", "letterSpacing": "-0.05em", "fontWeight": "900"}],
+                        "headline-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.04em", "fontWeight": "800"}],
+                        "headline-sm": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "headline-md": ["30px", {"lineHeight": "36px", "letterSpacing": "-0.03em", "fontWeight": "800"}],
+                        "label-mono": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                        "body-lg": ["18px", {"lineHeight": "32px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.25em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(22, 21, 20, 0.84);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .neon-hairline {
+            border: 1px solid rgba(223, 254, 0, 0.15);
+        }
+        .neon-hairline-error {
+            border: 1px solid rgba(255, 180, 171, 0.2);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0B0A09;
+            background-image: radial-gradient(circle at 50% -20%, #1a1a18 0%, #0B0A09 100%);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #161514;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #454932;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="text-on-background font-body-md min-h-screen">
+<!-- TopNavBar -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/20 shadow-sm shadow-black/40">
+<div class="max-w-[1280px] mx-auto h-20 px-margin-desktop flex justify-between items-center w-full">
+<div class="flex items-center gap-8">
+<span class="font-headline-sm text-headline-sm font-black tracking-tighter text-primary">AI Video Clipper</span>
+<nav class="hidden md:flex items-center gap-6">
+<a class="font-label-caps text-label-caps text-primary border-b-2 border-primary pb-1" href="#">Dashboard</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Add Video</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Videos</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Integrations</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative hidden sm:block">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant material-symbols-outlined text-[20px]">search</span>
+<input class="bg-[#161514] border-none rounded-lg pl-10 pr-4 py-2 text-body-sm w-64 focus:ring-1 focus:ring-primary/50 transition-all" placeholder="Search tasks..." type="text"/>
+</div>
+<button class="text-on-surface-variant hover:text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary active:scale-95 transition-all">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+</header>
+<main class="pt-32 pb-24 max-w-[1280px] mx-auto px-margin-desktop">
+<!-- Hero Section -->
+<div class="mb-12">
+<span class="font-label-caps text-label-caps text-primary/60 mb-2 block tracking-[0.4em]">MISSION CONTROL</span>
+<h1 class="font-headline-lg text-headline-lg max-w-2xl mb-4 text-white leading-tight">
+                Track every clip from raw video to <span class="text-primary italic">TikTok-ready.</span>
+</h1>
+<p class="text-on-surface-variant text-body-md max-w-lg">
+                The dashboard now reads live task data, surfaces worker failures, and keeps retry actions close to the error.
+            </p>
+</div>
+<!-- Metrics Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-gutter mb-xl">
+<div class="glass-panel p-lg rounded-xl flex flex-col gap-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant">VIDEOS</span>
+<span class="font-headline-md text-headline-md text-white">18</span>
+</div>
+<div class="glass-panel p-lg rounded-xl border-l-4 border-primary flex flex-col gap-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant">CLIPS GENERATED</span>
+<span class="font-headline-md text-headline-md text-primary">25</span>
+</div>
+<div class="glass-panel p-lg rounded-xl flex flex-col gap-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant">UPLOADS COMPLETE</span>
+<span class="font-headline-md text-headline-md text-white">0</span>
+</div>
+<div class="glass-panel p-lg rounded-xl border-l-4 border-error/50 flex flex-col gap-2 bg-error-container/10">
+<span class="font-label-caps text-label-caps text-error">FAILED ITEMS</span>
+<span class="font-headline-md text-headline-md text-error">4</span>
+</div>
+</div>
+<!-- Main Layout: 70/30 Asymmetric -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-gutter">
+<!-- Left Column: Tasks -->
+<div class="lg:col-span-8 space-y-xl">
+<!-- Needs Attention -->
+<section class="glass-panel p-xl rounded-xl neon-hairline-error">
+<div class="flex justify-between items-center mb-lg">
+<div>
+<span class="font-label-caps text-label-caps text-error mb-1 block">NEEDS ATTENTION</span>
+<h2 class="font-headline-sm text-headline-sm text-white">Failed work is waiting for a retry.</h2>
+</div>
+<button class="font-label-caps text-label-caps text-on-surface px-4 py-2 border border-outline-variant hover:border-primary transition-colors rounded-lg">Open Ledger</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Failed Card 1 -->
+<div class="bg-surface/40 p-md rounded-lg border border-outline-variant/10 group">
+<div class="flex gap-2 mb-2">
+<span class="bg-error/20 text-error px-2 py-0.5 rounded font-label-caps text-[10px]">FAILED</span>
+<span class="bg-white/5 text-on-surface-variant px-2 py-0.5 rounded font-label-caps text-[10px]">VIDEO TASK</span>
+</div>
+<h3 class="font-label-mono text-label-mono text-white mb-1 truncate">YTDown_YouTube_Sudah-Belajar...</h3>
+<p class="text-[11px] font-label-mono text-error/80 mb-4 line-clamp-2">page.screenshot: Target page, context or browser has been closed</p>
+<div class="flex gap-2">
+<button class="flex-1 font-label-caps text-[10px] text-white py-2 bg-white/5 hover:bg-white/10 rounded transition-colors">View</button>
+<button class="flex-1 font-label-caps text-[10px] text-on-primary py-2 bg-primary hover:bg-secondary-fixed active:scale-95 transition-all rounded">Retry video task</button>
+</div>
+</div>
+<!-- Failed Card 2 -->
+<div class="bg-surface/40 p-md rounded-lg border border-outline-variant/10 group">
+<div class="flex gap-2 mb-2">
+<span class="bg-error/20 text-error px-2 py-0.5 rounded font-label-caps text-[10px]">FAILED</span>
+<span class="bg-white/5 text-on-surface-variant px-2 py-0.5 rounded font-label-caps text-[10px]">VIDEO TASK</span>
+</div>
+<h3 class="font-label-mono text-label-mono text-white mb-1 truncate">Test19</h3>
+<p class="text-[11px] font-label-mono text-error/80 mb-4 line-clamp-2">Target context has been closed. Browser disconnect detected.</p>
+<div class="flex gap-2">
+<button class="flex-1 font-label-caps text-[10px] text-white py-2 bg-white/5 hover:bg-white/10 rounded transition-colors">View</button>
+<button class="flex-1 font-label-caps text-[10px] text-on-primary py-2 bg-primary hover:bg-secondary-fixed active:scale-95 transition-all rounded">Retry video task</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Task Pulse -->
+<section class="glass-panel p-xl rounded-xl neon-hairline">
+<div class="flex justify-between items-center mb-lg">
+<div>
+<h2 class="font-headline-sm text-headline-sm text-white">Recent task pulse</h2>
+<p class="text-on-surface-variant text-body-sm">Live video tasks ordered by latest activity.</p>
+</div>
+<button class="bg-primary text-on-primary font-label-caps text-label-caps px-4 py-2 rounded-lg hover:scale-[1.02] active:scale-95 transition-all">Add Video</button>
+</div>
+<div class="space-y-4">
+<!-- List Item 1 -->
+<div class="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/5 hover:border-primary/20 transition-all group">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[20px]">movie</span>
+</div>
+<div>
+<h4 class="font-body-md font-bold text-white">Test Reap 2</h4>
+<p class="font-label-mono text-[11px] text-on-surface-variant">0 clips • Updated May 21, 2024, 11:39 AM</p>
+</div>
+</div>
+<span class="font-label-caps text-[10px] text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">PROCESSING IN REAP</span>
+</div>
+<!-- List Item 2 -->
+<div class="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-secondary-container/10 flex items-center justify-center text-secondary-fixed">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+</div>
+<div>
+<h4 class="font-body-md font-bold text-white">YTDown_YouTube_Sudah-Belajar-Banyak</h4>
+<p class="font-label-mono text-[11px] text-on-surface-variant">3 clips • Updated May 19, 2024, 2:17 PM</p>
+</div>
+</div>
+<span class="font-label-caps text-[10px] text-secondary-fixed bg-secondary-container/10 px-3 py-1 rounded-full border border-secondary-fixed/20">READY TO UPLOAD</span>
+</div>
+<!-- List Item 3 -->
+<div class="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/5">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded bg-white/5 flex items-center justify-center text-white/40">
+<span class="material-symbols-outlined text-[20px]">pending</span>
+</div>
+<div>
+<h4 class="font-body-md font-bold text-white">Test Reap 1</h4>
+<p class="font-label-mono text-[11px] text-on-surface-variant">0 clips • Updated May 21, 2024, 11:38 AM</p>
+</div>
+</div>
+<span class="font-label-caps text-[10px] text-on-surface-variant bg-white/5 px-3 py-1 rounded-full border border-white/10">QUEUED</span>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Telemetry/Notes -->
+<div class="lg:col-span-4 space-y-gutter">
+<!-- Operator Note -->
+<div class="glass-panel p-lg rounded-xl border-t-2 border-primary">
+<span class="font-label-caps text-label-caps text-primary mb-4 block">OPERATOR NOTE</span>
+<h3 class="font-headline-sm text-headline-sm text-white mb-4">Watch the workers, not just the UI.</h3>
+<p class="text-body-sm text-on-surface-variant leading-relaxed font-label-mono">
+                        Use <span class="text-primary">npm run worker:health</span> to confirm Redis queues and database job counts before retrying failed work. High latency observed in US-EAST-1 cluster.
+                    </p>
+</div>
+<!-- System Telemetry -->
+<div class="glass-panel p-lg rounded-xl">
+<div class="flex justify-between items-center mb-6">
+<span class="font-label-caps text-label-caps text-on-surface-variant">SYSTEM TELEMETRY</span>
+<div class="flex gap-1">
+<div class="w-1 h-1 rounded-full bg-primary animate-pulse"></div>
+<div class="w-1 h-1 rounded-full bg-primary animate-pulse [animation-delay:200ms]"></div>
+<div class="w-1 h-1 rounded-full bg-primary animate-pulse [animation-delay:400ms]"></div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-end">
+<span class="text-[11px] font-label-mono text-on-surface-variant">CPU LOAD</span>
+<span class="text-[11px] font-label-mono text-primary">42%</span>
+</div>
+<div class="h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[42%]"></div>
+</div>
+<div class="flex justify-between items-end">
+<span class="text-[11px] font-label-mono text-on-surface-variant">MEMORY</span>
+<span class="text-[11px] font-label-mono text-secondary-fixed">2.4 GB / 8.0 GB</span>
+</div>
+<div class="h-1 bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-secondary-fixed w-[30%]"></div>
+</div>
+<div class="pt-4 border-t border-white/5">
+<span class="text-[10px] font-label-mono text-on-surface-variant uppercase tracking-widest block mb-2">Cluster Status</span>
+<div class="grid grid-cols-4 gap-1">
+<div class="h-8 bg-primary/20 border border-primary/40 rounded-sm"></div>
+<div class="h-8 bg-primary/20 border border-primary/40 rounded-sm"></div>
+<div class="h-8 bg-error/20 border border-error/40 rounded-sm"></div>
+<div class="h-8 bg-primary/20 border border-primary/40 rounded-sm"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Shortcut Card -->
+<div class="relative overflow-hidden rounded-xl h-48 group">
+<img class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="A macro close-up of a high-tech computer processing unit with glowing neon lime and laser green fiber optic lines running through a dark obsidian structure. The lighting is moody and cinematic, emphasizing a futuristic, technical laboratory atmosphere. Subtle digital artifacts and data streams flow across the surface of the hardware." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDvaeVGQXMNRmTaq3haCPuSgltwZPccNA44Ecw5YafzZK4zV6dLSHVgVX7anbIneVFLt4MYLs9PsgEYtc4rdvaHFQGGsP3g6fDsvzYZWyNKfpBLYcvprdHN_icX7qvvZf_88JXLejlW2tP2f9zgQc6KpqoO_IlfUsaF702_fvZaqsahBo-hkmwPo6043UCyzFrgnQOPxJ0XPYSffV0GeJ1erfYCJOoWRX1G1SQEdlRCfBe0m8gO48mEPmcfaLT-mEB2-qi7UUtqwt-k"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent p-lg flex flex-col justify-end">
+<h4 class="font-headline-sm text-white mb-1">Documentation</h4>
+<p class="text-body-sm text-white/60 mb-4">View the SDK reference &amp; CLI commands.</p>
+<a class="inline-flex items-center gap-2 text-primary font-label-caps text-label-caps" href="#">
+                            Read more <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="bg-surface border-t border-outline-variant/10 py-12">
+<div class="max-w-[1280px] mx-auto px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-8">
+<div class="flex flex-col items-center md:items-start gap-2">
+<span class="font-headline-sm text-headline-sm font-black text-primary">AI Video Clipper</span>
+<p class="text-on-surface-variant font-label-caps text-[10px] tracking-widest">© 2024 AI VIDEO CLIPPER. ALL RIGHTS RESERVED.</p>
+</div>
+<div class="flex gap-8">
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Terms</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Twitter</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">GitHub</a>
+<a class="font-label-caps text-label-caps text-on-surface-variant hover:text-primary transition-colors" href="#">Documentation</a>
+</div>
+</div>
+</footer>
+<!-- FAB for Quick Upload (Contextual for Dashboard) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-primary text-on-primary rounded-full shadow-lg shadow-primary/20 flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-[60] group">
+<span class="material-symbols-outlined font-bold text-[32px]">add</span>
+<span class="absolute right-16 bg-surface-container-highest px-4 py-2 rounded-lg font-label-caps text-label-caps opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-outline-variant whitespace-nowrap">
+            NEW CLIP TASK
+        </span>
+</button>
+</body></html>

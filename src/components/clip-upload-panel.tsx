@@ -74,10 +74,10 @@ export function ClipUploadPanel({ clipId, storagePath, uploadTargets }: ClipUplo
   }
 
   return (
-    <section className="grid gap-3 rounded-[1.5rem] border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] p-4">
+    <section className="grid gap-3 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="font-[family-name:var(--font-mono)] text-xs font-black uppercase tracking-[0.25em] text-[#dffe00]">TikTok upload</p>
+          <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">TikTok upload</p>
           <p className="mt-1 text-sm leading-6 text-[#c6c9ab]">
             Queues the Reap publish worker with this clip file and current metadata.
           </p>
@@ -86,7 +86,7 @@ export function ClipUploadPanel({ clipId, storagePath, uploadTargets }: ClipUplo
       </div>
 
       {latestTikTokUpload ? (
-        <div className="rounded-2xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] px-4 py-3 text-sm leading-6 text-[#c6c9ab]">
+        <div className="rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] px-4 py-3 text-sm leading-6 text-[#c6c9ab]">
           <p>
             Latest attempt: <span className="font-bold text-[#e2e2e1]">{formatDate(latestTikTokUpload.createdAt)}</span>
           </p>
@@ -105,7 +105,7 @@ export function ClipUploadPanel({ clipId, storagePath, uploadTargets }: ClipUplo
       ) : null}
 
       {!storagePath ? (
-        <p className="rounded-2xl border border-[#c6c9ab] bg-[rgba(30,32,32,0.70)] px-4 py-3 text-sm font-bold text-[#c6c9ab]">
+        <p className="rounded-lg border border-[#c6c9ab] bg-[rgba(30,32,32,0.70)] px-4 py-3 text-sm font-bold text-[#c6c9ab]">
           This clip needs a storage path before TikTok upload can be queued.
         </p>
       ) : null}
@@ -114,13 +114,13 @@ export function ClipUploadPanel({ clipId, storagePath, uploadTargets }: ClipUplo
         type="button"
         onClick={uploadToTikTok}
         disabled={!canUpload}
-        className="rounded-2xl bg-[#dffe00] px-5 py-3 font-black text-[#0b0a09] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+        className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
       >
         {hasActiveUpload ? "Upload in progress" : busy ? "Queueing..." : uploadFailed ? "Retry TikTok upload" : "Upload to TikTok"}
       </button>
 
-      {message ? <p className="rounded-2xl border border-[#dffe00] bg-[rgba(57,255,20,0.10)] px-4 py-3 text-sm font-bold text-[#dffe00]">{message}</p> : null}
-      {error ? <p className="rounded-2xl border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-3 text-sm font-bold text-[#ffb4ab]">{error}</p> : null}
+      {message ? <p className="rounded-lg border border-[#dffe00] bg-[rgba(57,255,20,0.10)] px-4 py-3 text-sm font-bold text-[#dffe00]">{message}</p> : null}
+      {error ? <p className="rounded-lg border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-3 text-sm font-bold text-[#ffb4ab]">{error}</p> : null}
     </section>
   );
 }

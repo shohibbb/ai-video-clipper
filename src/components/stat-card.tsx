@@ -8,16 +8,16 @@ export function StatCard({
   tone?: "neutral" | "ember" | "moss" | "steel";
 }) {
   const toneClass = {
-    neutral: "bg-[#fffaf0]",
-    ember: "bg-[color:var(--ember)] text-[#fffaf0]",
-    moss: "bg-[color:var(--moss)] text-[#fffaf0]",
-    steel: "bg-[color:var(--steel)] text-[#fffaf0]",
+    neutral: "text-white",
+    ember: "border-[#ffb4ab] bg-[rgba(255,180,171,0.08)] text-[#ffb4ab]",
+    moss: "border-[#dffe00] text-[#dffe00]",
+    steel: "border-[#39ff14] text-[#39ff14]",
   }[tone];
 
   return (
-    <article className={`rounded-[1.75rem] border border-[color:var(--line)] p-5 shadow-[0_20px_50px_rgba(30,26,21,0.08)] ${toneClass}`}>
-      <p className="text-xs font-bold uppercase tracking-[0.28em] opacity-70">{label}</p>
-      <p className="mt-5 text-4xl font-black tracking-[-0.06em]">{value}</p>
+    <article className={`rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl ${toneClass}`}>
+      <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#c6c9ab]">{label}</p>
+      <p className="mt-3 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em]">{value}</p>
     </article>
   );
 }

@@ -144,27 +144,28 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
       eyebrow="Video Detail"
       title="Review clips, tune captions, keep the queue honest."
       description="Clip preview and metadata editing are live. Caption generation is intentionally safe and returns a clear placeholder when no AI key is configured."
+      activeHref="/videos"
     >
-      <div className="grid gap-6 lg:grid-cols-[0.72fr_1fr]">
-        <section className="rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--panel)] p-6 shadow-[0_24px_80px_rgba(30,26,21,0.10)] backdrop-blur">
-          <p className="text-xs font-black uppercase tracking-[0.28em] text-[color:var(--moss)]">Task ID</p>
-          <h2 className="mt-3 break-all text-3xl font-black tracking-[-0.05em]">{video.id}</h2>
+      <div className="grid gap-5 lg:grid-cols-12">
+        <section className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl lg:col-span-4">
+          <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Task ID</p>
+          <h2 className="mt-3 break-all font-[family-name:var(--font-mono)] text-[13px] font-medium leading-[18px] text-white">{video.id}</h2>
           <div className="mt-6 flex flex-wrap gap-2">
             <StatusBadge status={video.status} />
             <StatusBadge status={`${clips.length} clips`} />
           </div>
 
-          <div className="mt-6 grid gap-4 text-sm leading-7 text-[color:var(--muted)]">
+          <div className="mt-6 grid gap-4 text-sm leading-7 text-[#c6c9ab]">
             <div>
-              <p className="font-black uppercase tracking-[0.18em] text-[color:var(--steel)]">Source</p>
-              <p className="break-all">{displayTitle}</p>
+              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Source</p>
+              <p className="break-all text-[#e2e2e1]">{displayTitle}</p>
             </div>
             <div>
-              <p className="font-black uppercase tracking-[0.18em] text-[color:var(--steel)]">Created</p>
+              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Created</p>
               <p>{formatDate(video.createdAt)}</p>
             </div>
             {video.errorMessage ? (
-              <div className="rounded-2xl border border-[#d45f47] bg-[#ffe4dc] px-4 py-3 text-[#8a2d1d]">
+              <div className="rounded-lg border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-3 text-[#ffb4ab]">
                 <p className="font-black">Last error</p>
                 <p>{video.errorMessage}</p>
               </div>
@@ -172,7 +173,7 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
           </div>
 
           <div className="mt-6 flex flex-col gap-3">
-            <Link href="/videos" className="rounded-2xl border border-[color:var(--line)] px-5 py-3 text-center font-black transition hover:border-[color:var(--ember)] hover:text-[color:var(--ember)]">
+            <Link href="/videos" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-2.5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.16em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[rgba(223,254,0,0.42)] hover:text-[#dffe00]">
               Back to video list
             </Link>
             {["failed", "cancelled"].includes(video.status) ? (
@@ -181,15 +182,15 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-[color:var(--line)] bg-[#fffaf0]/80 p-6 shadow-[0_24px_80px_rgba(30,26,21,0.08)]">
+        <section className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl lg:col-span-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-[color:var(--moss)]">Clip Review</p>
-              <h2 className="mt-2 text-3xl font-black tracking-[-0.05em]">
+              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Clip Review</p>
+              <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em] text-white">
                 {clips.length ? `${clips.length} clip${clips.length === 1 ? "" : "s"} ready for metadata` : "No clips generated yet"}
               </h2>
             </div>
-            <p className="max-w-md text-sm leading-6 text-[color:var(--muted)]">
+            <p className="max-w-md text-sm leading-6 text-[#c6c9ab]">
               Prepare metadata, then queue TikTok upload through the Reap publish worker.
             </p>
           </div>
@@ -197,7 +198,7 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
           <div className="mt-6 grid gap-6">
             {clips.length ? (
               clips.map((clip, index) => (
-                <article key={clip.id} className="grid items-start gap-5 rounded-[2rem] border border-[color:var(--line)] bg-[#f7f1e3] p-4 lg:grid-cols-[minmax(15rem,0.62fr)_1fr]">
+                <article key={clip.id} className="grid items-start gap-5 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] p-4 lg:grid-cols-[minmax(15rem,0.62fr)_1fr]">
                   <ClipPreview
                     title={clip.title || `Clip ${index + 1}`}
                     status={clip.status}
@@ -216,8 +217,8 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
                     </div>
 
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.24em] text-[color:var(--moss)]">Clip ID</p>
-                      <p className="mt-1 break-all text-sm text-[color:var(--muted)]">{clip.id}</p>
+                      <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Clip ID</p>
+                      <p className="mt-1 break-all font-[family-name:var(--font-mono)] text-[13px] font-medium leading-[18px] text-[#c6c9ab]">{clip.id}</p>
                     </div>
 
                     <ClipMetadataEditor
@@ -234,10 +235,10 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
                 </article>
               ))
             ) : (
-              <div className="rounded-[2rem] border border-dashed border-[color:var(--line)] bg-[#f7f1e3] p-8 text-center">
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-[color:var(--moss)]">Awaiting output</p>
-                <h3 className="mt-3 text-3xl font-black tracking-[-0.05em]">No clip records yet.</h3>
-                <p className="mx-auto mt-3 max-w-xl leading-7 text-[color:var(--muted)]">
+              <div className="rounded-xl border border-dashed border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] p-8 text-center">
+                <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Awaiting output</p>
+                <h3 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em] text-white">No clip records yet.</h3>
+                <p className="mx-auto mt-3 max-w-xl leading-7 text-[#c6c9ab]">
                   Once the Reap worker creates clip records, this panel will show previews and editable metadata.
                 </p>
               </div>
@@ -246,22 +247,22 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
         </section>
       </div>
 
-      <section className="mt-6 rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--panel)] p-6 shadow-[0_24px_80px_rgba(30,26,21,0.08)] backdrop-blur">
-        <p className="text-xs font-black uppercase tracking-[0.28em] text-[color:var(--moss)]">Recent Worker Timeline</p>
+      <section className="mt-5 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl">
+        <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Recent Worker Timeline</p>
         <div className="mt-4 grid gap-3">
           {video.jobs.length ? (
             video.jobs.map((job) => (
-              <div key={job.id} className="grid gap-3 rounded-2xl border border-[color:var(--line)] bg-[#fffaf0]/75 px-4 py-3 md:grid-cols-[1fr_auto] md:items-center">
+              <div key={job.id} className="grid gap-3 rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-3 md:grid-cols-[1fr_auto] md:items-center">
                 <div>
-                  <p className="font-black tracking-[-0.03em]">{job.jobType.replaceAll("_", " ")}</p>
-                  <p className="text-sm text-[color:var(--muted)]">{formatDate(job.createdAt)}</p>
-                  {job.errorMessage ? <p className="mt-1 text-sm font-bold text-[#8a2d1d]">{job.errorMessage}</p> : null}
+                  <p className="font-[family-name:var(--font-display)] font-black tracking-[-0.04em] text-white">{job.jobType.replaceAll("_", " ")}</p>
+                  <p className="text-sm text-[#c6c9ab]">{formatDate(job.createdAt)}</p>
+                  {job.errorMessage ? <p className="mt-1 text-sm font-bold text-[#ffb4ab]">{job.errorMessage}</p> : null}
                 </div>
                 <StatusBadge status={job.status} />
               </div>
             ))
           ) : (
-            <p className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0]/75 px-4 py-3 text-sm font-bold text-[color:var(--muted)]">
+            <p className="rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-3 text-sm font-bold text-[#c6c9ab]">
               No jobs recorded yet.
             </p>
           )}

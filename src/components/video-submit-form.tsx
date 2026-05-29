@@ -58,48 +58,48 @@ export function VideoSubmitForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-[2rem] border border-[color:var(--line)] bg-[color:var(--panel)] p-6 shadow-[0_24px_80px_rgba(30,26,21,0.10)] backdrop-blur">
+    <form onSubmit={handleSubmit} className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl">
       <div className="grid gap-5">
         <input type="hidden" name="sourceType" value="file" />
 
         <label className="grid gap-2">
-          <span className="text-sm font-black uppercase tracking-[0.22em] text-[color:var(--moss)]">Video URL</span>
+          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Video URL</span>
           <input
             name="sourceUrl"
             type="url"
             placeholder="https://example.com/video.mp4"
-            className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 text-base outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           />
-          <span className="text-xs font-bold text-[color:var(--muted)]">Use a URL, or choose a file below. If both are set, the file upload wins.</span>
+          <span className="text-xs font-bold text-[#909378]">Use a URL, or choose a file below. If both are set, the file upload wins.</span>
         </label>
 
         <label className="grid gap-2">
-          <span className="text-sm font-black uppercase tracking-[0.22em] text-[color:var(--moss)]">Source file</span>
+          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Source file</span>
           <input
             name="sourceFile"
             type="file"
             accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
-            className="rounded-2xl border border-dashed border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 text-base outline-none transition file:mr-4 file:rounded-full file:border-0 file:bg-[color:var(--ink)] file:px-4 file:py-2 file:text-sm file:font-black file:text-[#fffaf0] focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+            className="w-full rounded-lg border border-dashed border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-[#d3f000] file:px-4 file:py-2 file:font-[family-name:var(--font-mono)] file:text-xs file:font-bold file:uppercase file:tracking-[0.12em] file:text-[#2c3400] placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           />
-          <span className="text-xs font-bold text-[color:var(--muted)]">Allowed formats: MP4, MOV, WEBM.</span>
+          <span className="text-xs font-bold text-[#909378]">Allowed formats: MP4, MOV, WEBM.</span>
         </label>
 
         <label className="grid gap-2">
-          <span className="text-sm font-black uppercase tracking-[0.22em] text-[color:var(--moss)]">Working title</span>
+          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Working title</span>
           <input
             name="title"
             type="text"
             placeholder="Podcast episode 17, launch webinar, customer interview..."
-            className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 text-base outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           />
         </label>
 
         <label className="grid gap-2">
-          <span className="text-sm font-black uppercase tracking-[0.22em] text-[color:var(--moss)]">Target platform</span>
+          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Target platform</span>
           <select
             name="platform"
             defaultValue="tiktok"
-            className="rounded-2xl border border-[color:var(--line)] bg-[#fffaf0] px-4 py-3 text-base outline-none transition focus:border-[color:var(--ember)] focus:ring-4 focus:ring-[#e8552f]/15"
+            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
           >
             <option value="tiktok">TikTok only for MVP</option>
           </select>
@@ -108,13 +108,13 @@ export function VideoSubmitForm() {
         <button
           type="submit"
           disabled={state === "submitting"}
-          className="rounded-2xl bg-[color:var(--ink)] px-5 py-4 text-base font-black text-[#fffaf0] shadow-[0_18px_40px_rgba(30,26,21,0.18)] transition hover:-translate-y-0.5 hover:bg-[color:var(--ember)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {state === "submitting" ? "Creating task..." : "Create clipping task"}
         </button>
 
         {message ? (
-          <p className={`rounded-2xl border px-4 py-3 text-sm font-bold ${state === "error" ? "border-[#d45f47] bg-[#ffe4dc] text-[#8a2d1d]" : "border-[#6c8b53] bg-[#e6efdf] text-[#39502d]"}`}>
+          <p className={`rounded-lg border px-4 py-3 text-sm font-bold ${state === "error" ? "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] text-[#ffb4ab]" : "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]"}`}>
             {message}
           </p>
         ) : null}
