@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --webpack",
+    "build": "npm run prisma:generate && next build --webpack",
     "start": "next start",
     "typegen": "next typegen",
     "typecheck": "npm run typegen && tsc --noEmit",
