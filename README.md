@@ -67,7 +67,16 @@ This repository is through **Phase 8** (all Reap migration complete):
    npm run prisma:migrate
    ```
 
-7. Configure storage:
+7. Configure auth:
+
+   - Local development can use `ALLOW_DEV_AUTH=true` with `DEV_USER_ID` and `DEV_USER_EMAIL`.
+   - Production should set `ALLOW_DEV_AUTH=false` or omit it.
+   - Production must configure at least one OAuth provider:
+     - Google: `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`
+     - GitHub: `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`
+   - Keep `NEXTAUTH_SECRET` private and set `NEXTAUTH_URL` to your deployed app URL.
+
+8. Configure storage:
 
    - Create a private Supabase Storage bucket, for example `clips`.
    - Set `STORAGE_PROVIDER=supabase`.
@@ -75,45 +84,45 @@ This repository is through **Phase 8** (all Reap migration complete):
    - Set `SUPABASE_SERVICE_ROLE_KEY` server-side only. Never expose it to the browser.
    - Set `SUPABASE_STORAGE_BUCKET=clips` or your chosen bucket name.
 
-8. Configure Reap:
+9. Configure Reap:
 
    - Set `REAP_API_KEY` (get from [reap.video](https://reap.video)).
    - Connect your TikTok account at `https://reap.video/settings/integrations`.
    - Optional: adjust `REAP_DEFAULT_*` settings in `.env`.
 
-9. Start the development server:
+10. Start the development server:
 
    ```bash
    npm run dev
    ```
 
-10. In a second terminal, start the Reap processing worker:
+11. In a second terminal, start the Reap processing worker:
 
     ```bash
     npm run worker:reap
     ```
 
-11. In a third terminal, start the Reap publish worker for TikTok uploads:
+12. In a third terminal, start the Reap publish worker for TikTok uploads:
 
     ```bash
     npm run worker:reap-publish
     ```
 
-12. In a fourth terminal, start the Reap publish status worker:
+13. In a fourth terminal, start the Reap publish status worker:
 
     ```bash
     npm run worker:reap-publish-status
     ```
 
-13. In a fifth terminal, start the Reap polling worker (fallback when webhooks are not available):
+14. In a fifth terminal, start the Reap polling worker (fallback when webhooks are not available):
 
     ```bash
     npm run worker:reap-polling
     ```
 
-14. Open `http://localhost:3000/dashboard`.
+15. Open `http://localhost:3000/dashboard`.
 
-15. Check queue and worker health when debugging:
+16. Check queue and worker health when debugging:
 
     ```bash
     npm run worker:health
@@ -241,7 +250,8 @@ Reap Publish Worker → Reap API → TikTok
 
 ## TODO Before Production
 
-- Production deployment: add real auth, secrets management, managed Redis/Postgres, worker process supervision, migrations, backups, and observability dashboards.
+- Production deployment: add secrets management, managed Redis/Postgres, worker process supervision, migrations, backups, and observability dashboards.
+- Auth hardening: configure OAuth providers, rotate `NEXTAUTH_SECRET`, and keep `ALLOW_DEV_AUTH` disabled outside local/internal development.
 - Compliance review: review Reap and TikTok terms, consent, rate limits, content policy, and data retention before external or high-volume use.
 - Webhook URL: configure a stable HTTPS webhook endpoint for Reap callbacks.
 - TikTok integration monitoring: periodically verify the TikTok connection in Reap dashboard remains active.
