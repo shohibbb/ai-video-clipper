@@ -217,6 +217,7 @@ npm run worker:reap-publish-status
 npm run worker:health
 npm run setup:check
 npm run production:check
+npm run staging:smoke
 ```
 
 ## Troubleshooting
@@ -310,7 +311,37 @@ The included Docker setup builds one image that can run the Next.js app, Prisma 
    docker compose -f docker-compose.production.example.yml up -d app worker-reap worker-reap-polling worker-reap-publish worker-reap-publish-status
    ```
 
+7. Run smoke tests against the deployed URL:
+
+   ```bash
+   STAGING_BASE_URL=https://your-staging-domain.com npm run staging:smoke
+   ```
+
 Use managed Postgres and Redis for real production. The root `docker-compose.yml` remains local-development infrastructure only.
+
+## Staging Smoke Tests
+
+`npm run staging:smoke` verifies the minimum deployment surface before running a real Reap/TikTok flow:
+
+- `GET /api/health` returns `ok: true` with database and Redis checks passing.
+- `/`, `/terms`, and `/privacy` return `200`.
+- `/dashboard` redirects unauthenticated visitors to `/api/auth/signin`.
+
+Required env:
+
+```bash
+STAGING_BASE_URL=https://your-staging-domain.com
+```
+
+Optional env:
+
+```bash
+SMOKE_TIMEOUT_MS=10000
+SMOKE_EXPECT_AUTHENTICATED=false
+SMOKE_ALLOW_LOCAL=false
+```
+
+Use `SMOKE_ALLOW_LOCAL=true` only when testing a local server.
 
 ## TODO Before Production
 
@@ -320,4 +351,5 @@ Use managed Postgres and Redis for real production. The root `docker-compose.yml
 - Webhook hardening: set `REAP_WEBHOOK_SECRET`; enable timestamp verification only when Reap sends timestamped signatures.
 - Compliance review: review Reap and TikTok terms, consent, rate limits, content policy, and data retention before external or high-volume use.
 - Webhook URL: configure a stable HTTPS webhook endpoint for Reap callbacks.
+- Staging validation: run `npm run staging:smoke`, then one real URL submission through Reap before production traffic.
 - TikTok integration monitoring: periodically verify the TikTok connection in Reap dashboard remains active.

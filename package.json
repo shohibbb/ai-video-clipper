@@ -16,6 +16,7 @@
     "worker:health": "tsx -r dotenv/config scripts/worker-health.ts",
     "setup:check": "tsx -r dotenv/config scripts/check-integrations.ts",
     "production:check": "tsx -r dotenv/config scripts/check-production.ts",
+    "staging:smoke": "tsx -r dotenv/config scripts/smoke-staging.ts",
     "prisma:generate": "prisma generate",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:migrate": "prisma migrate dev",
