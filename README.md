@@ -339,9 +339,11 @@ Optional env:
 SMOKE_TIMEOUT_MS=10000
 SMOKE_EXPECT_AUTHENTICATED=false
 SMOKE_ALLOW_LOCAL=false
+VERCEL_PROTECTION_BYPASS=your_vercel_automation_bypass_token
 ```
 
 Use `SMOKE_ALLOW_LOCAL=true` only when testing a local server.
+Set `VERCEL_PROTECTION_BYPASS` when Vercel Deployment Protection is enabled.
 
 ## TODO Before Production
 
