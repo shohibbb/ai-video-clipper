@@ -47,6 +47,7 @@ export function getStorageService(): StorageService {
 
 export type {
   DownloadFileResult,
+  SignedUploadUrlResult,
   SignedUrlResult,
   StorageService,
   UploadFileInput,

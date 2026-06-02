@@ -11,8 +11,8 @@ import {
   isAllowedVideoFile,
   validationErrorResponse,
 } from "@/lib/api/validation";
-import { enqueueVideoProcessingJob } from "@/lib/queue/video-queue";
 import { prisma } from "@/lib/prisma";
+import { enqueueVideoOrFail } from "@/lib/services/video-task-queue";
 import { getStorageService } from "@/lib/storage";
 
 export const runtime = "nodejs";
@@ -50,19 +50,6 @@ export async function GET() {
       updatedAt: video.updatedAt,
     })),
   });
-}
-
-async function enqueueVideoOrFail(video: { id: string; userId: string; sourceUrl: string | null; sourceStoragePath: string | null }) {
-  try {
-    return await enqueueVideoProcessingJob({
-      userId: video.userId,
-      videoId: video.id,
-      sourceUrl: video.sourceUrl,
-      sourceStoragePath: video.sourceStoragePath,
-    });
-  } catch {
-    return null;
-  }
 }
 
 async function createUrlVideoTask(userId: string, body: unknown) {

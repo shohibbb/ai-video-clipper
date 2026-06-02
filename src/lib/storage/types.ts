@@ -25,9 +25,18 @@ export type SignedUrlResult = {
   expiresInSeconds: number;
 };
 
+export type SignedUploadUrlResult = {
+  path: string;
+  signedUrl: string;
+  token: string;
+  expiresInSeconds: number;
+};
+
 export interface StorageService {
   uploadFile(input: UploadFileInput): Promise<UploadFileResult>;
   downloadFile(path: string): Promise<DownloadFileResult>;
   getSignedUrl(path: string, expiresInSeconds?: number): Promise<SignedUrlResult>;
+  createSignedUploadUrl(path: string, options?: { upsert?: boolean }): Promise<SignedUploadUrlResult>;
+  fileExists(path: string): Promise<boolean>;
   deleteFile(path: string): Promise<void>;
 }

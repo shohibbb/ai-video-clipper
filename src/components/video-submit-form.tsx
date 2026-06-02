@@ -5,6 +5,51 @@ import { FormEvent, useState } from "react";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
+type ApiResult = {
+  error?: string;
+  details?: unknown;
+  videoId?: string;
+  signedUploadUrl?: string;
+};
+
+async function readJsonResponse(response: Response): Promise<ApiResult> {
+  const text = await response.text();
+
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text) as ApiResult;
+  } catch {
+    return {
+      error: text,
+    };
+  }
+}
+
+function formatApiError(result: ApiResult, fallback: string) {
+  const details = typeof result.details === "string" ? result.details : "";
+
+  return [result.error, details].filter(Boolean).join(" ") || fallback;
+}
+
+async function uploadToSignedUrl(signedUploadUrl: string, sourceFile: File) {
+  const uploadFormData = new FormData();
+  uploadFormData.append("cacheControl", "3600");
+  uploadFormData.append("", sourceFile);
+
+  const response = await fetch(signedUploadUrl, {
+    method: "PUT",
+    body: uploadFormData,
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(body || `Storage upload failed with status ${response.status}.`);
+  }
+}
+
 export function VideoSubmitForm() {
   const router = useRouter();
   const [state, setState] = useState<SubmitState>("idle");
@@ -26,29 +71,82 @@ export function VideoSubmitForm() {
       return;
     }
 
-    const response = hasSourceFile
-      ? await fetch("/api/videos", {
-          method: "POST",
-          body: formData,
-        })
-      : await fetch("/api/videos", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sourceType: "url",
-            sourceUrl,
-            title: String(formData.get("title") ?? ""),
-            platformTargets: ["tiktok"],
-          }),
-        });
+    if (hasSourceFile) {
+      setMessage("Preparing direct storage upload...");
+      const createResponse = await fetch("/api/videos/upload-url", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sourceType: "file",
+          fileName: sourceFile.name,
+          fileSize: sourceFile.size,
+          contentType: sourceFile.type || null,
+          title: String(formData.get("title") ?? ""),
+          platform: String(formData.get("platform") ?? "tiktok"),
+        }),
+      });
+      const createResult = await readJsonResponse(createResponse);
 
-    const result = await response.json();
+      if (!createResponse.ok || !createResult.videoId || !createResult.signedUploadUrl) {
+        setState("error");
+        setMessage(formatApiError(createResult, "Unable to prepare source video upload."));
+        return;
+      }
+
+      try {
+        setMessage("Uploading source video to storage...");
+        await uploadToSignedUrl(createResult.signedUploadUrl, sourceFile);
+      } catch (error) {
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "Unable to upload source video to storage.");
+        return;
+      }
+
+      setMessage("Queueing processing job...");
+      const completeResponse = await fetch(`/api/videos/${createResult.videoId}/complete-upload`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fileName: sourceFile.name,
+          fileSize: sourceFile.size,
+          contentType: sourceFile.type || null,
+        }),
+      });
+      const completeResult = await readJsonResponse(completeResponse);
+
+      if (!completeResponse.ok) {
+        setState("error");
+        setMessage(formatApiError(completeResult, "Unable to queue video task after upload."));
+        return;
+      }
+
+      setState("success");
+      setMessage("Video task created. Redirecting to detail...");
+      router.push(`/videos/${completeResult.videoId || createResult.videoId}`);
+      return;
+    }
+
+    const response = await fetch("/api/videos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sourceType: "url",
+        sourceUrl,
+        title: String(formData.get("title") ?? ""),
+        platformTargets: ["tiktok"],
+      }),
+    });
+    const result = await readJsonResponse(response);
 
     if (!response.ok) {
       setState("error");
-      setMessage([result.error, result.details].filter(Boolean).join(" ") || "Unable to create video task.");
+      setMessage(formatApiError(result, "Unable to create video task."));
       return;
     }
 

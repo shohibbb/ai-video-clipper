@@ -37,13 +37,17 @@ export function isAllowedVideoExtension(extension: string): extension is Allowed
 }
 
 export function isAllowedVideoFile(file: File) {
-  const extension = getFileExtension(file.name);
+  return isAllowedVideoFileMetadata(file.name, file.type);
+}
+
+export function isAllowedVideoFileMetadata(fileName: string, contentType?: string | null) {
+  const extension = getFileExtension(fileName);
 
   if (!isAllowedVideoExtension(extension)) {
     return false;
   }
 
-  return !file.type || allowedVideoMimeTypes.includes(file.type);
+  return !contentType || allowedVideoMimeTypes.includes(contentType);
 }
 
 export function getAllowedVideoFileTypesLabel() {
@@ -85,6 +89,21 @@ export const createVideoFileFieldsSchema = z.strictObject({
   sourceType: z.literal("file"),
   title: z.string().trim().max(200).optional().nullable(),
   platform: z.literal("tiktok").optional().default("tiktok"),
+});
+
+export const createVideoSignedUploadRequestSchema = z.strictObject({
+  sourceType: z.literal("file"),
+  fileName: z.string().trim().min(1).max(255),
+  fileSize: z.number().int().positive(),
+  contentType: z.string().trim().max(120).optional().nullable(),
+  title: z.string().trim().max(200).optional().nullable(),
+  platform: z.literal("tiktok").optional().default("tiktok"),
+});
+
+export const completeVideoFileUploadRequestSchema = z.strictObject({
+  fileName: z.string().trim().min(1).max(255),
+  fileSize: z.number().int().positive(),
+  contentType: z.string().trim().max(120).optional().nullable(),
 });
 
 export const updateClipMetadataRequestSchema = z

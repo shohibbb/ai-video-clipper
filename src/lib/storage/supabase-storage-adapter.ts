@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   DownloadFileResult,
   SignedUrlResult,
+  SignedUploadUrlResult,
   StorageService,
   UploadFileInput,
   UploadFileResult,
@@ -75,6 +76,33 @@ export class SupabaseStorageAdapter implements StorageService {
       signedUrl: data.signedUrl,
       expiresInSeconds,
     };
+  }
+
+  async createSignedUploadUrl(path: string, options: { upsert?: boolean } = {}): Promise<SignedUploadUrlResult> {
+    const { data, error } = await this.client.storage.from(this.bucket).createSignedUploadUrl(path, {
+      upsert: options.upsert ?? false,
+    });
+
+    if (error) {
+      throw new Error(`Supabase signed upload URL failed for ${path}: ${error.message}`);
+    }
+
+    return {
+      path: data.path,
+      signedUrl: data.signedUrl,
+      token: data.token,
+      expiresInSeconds: 60 * 60 * 2,
+    };
+  }
+
+  async fileExists(path: string): Promise<boolean> {
+    const { data, error } = await this.client.storage.from(this.bucket).exists(path);
+
+    if (error && data !== false) {
+      throw new Error(`Supabase exists check failed for ${path}: ${error.message}`);
+    }
+
+    return data;
   }
 
   async deleteFile(path: string): Promise<void> {
