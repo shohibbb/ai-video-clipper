@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { formatStorageUploadError } from "@/lib/storage/upload-errors";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
 
@@ -46,7 +47,7 @@ async function uploadToSignedUrl(signedUploadUrl: string, sourceFile: File) {
 
   if (!response.ok) {
     const body = await response.text().catch(() => "");
-    throw new Error(body || `Storage upload failed with status ${response.status}.`);
+    throw new Error(formatStorageUploadError(response.status, body));
   }
 }
 
