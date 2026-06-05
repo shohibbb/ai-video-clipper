@@ -2,9 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { ReapClippingConfigurator } from "@/components/reap-clipping-configurator";
+import type { ReapClippingConfig } from "@/lib/reap/clipping-config";
 import { formatStorageUploadError } from "@/lib/storage/upload-errors";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
+type PreparedSource =
+  | {
+      type: "url";
+      sourceUrl: string;
+      title: string;
+      platform: string;
+    }
+  | {
+      type: "file";
+      sourceFile: File;
+      title: string;
+      platform: string;
+    };
 
 type ApiResult = {
   error?: string;
@@ -51,20 +66,23 @@ async function uploadToSignedUrl(signedUploadUrl: string, sourceFile: File) {
   }
 }
 
-export function VideoSubmitForm() {
+export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClippingConfig }) {
   const router = useRouter();
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState<string>("");
+  const [preparedSource, setPreparedSource] = useState<PreparedSource | null>(null);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setState("submitting");
+    setState("idle");
     setMessage("");
 
     const formData = new FormData(event.currentTarget);
     const sourceFile = formData.get("sourceFile");
     const hasSourceFile = sourceFile instanceof File && sourceFile.size > 0;
     const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
+    const title = String(formData.get("title") ?? "").trim();
+    const platform = String(formData.get("platform") ?? "tiktok");
 
     if (!hasSourceFile && !sourceUrl) {
       setState("error");
@@ -73,7 +91,37 @@ export function VideoSubmitForm() {
     }
 
     if (hasSourceFile) {
-      setMessage("Preparing direct storage upload...");
+      setPreparedSource({
+        type: "file",
+        sourceFile,
+        title,
+        platform,
+      });
+      setMessage("Source selected. Configure Reap options before queueing.");
+      return;
+    }
+
+    setPreparedSource({
+      type: "url",
+      sourceUrl,
+      title,
+      platform,
+    });
+    setMessage("Source selected. Configure Reap options before queueing.");
+  }
+
+  async function createAndStartClipping(config: ReapClippingConfig) {
+    if (!preparedSource) {
+      return {
+        ok: false as const,
+        error: "Add a source video before starting clipping.",
+      };
+    }
+
+    setState("submitting");
+
+    if (preparedSource.type === "file") {
+      setMessage("Creating source draft and signed upload URL...");
       const createResponse = await fetch("/api/videos/upload-url", {
         method: "POST",
         headers: {
@@ -81,28 +129,32 @@ export function VideoSubmitForm() {
         },
         body: JSON.stringify({
           sourceType: "file",
-          fileName: sourceFile.name,
-          fileSize: sourceFile.size,
-          contentType: sourceFile.type || null,
-          title: String(formData.get("title") ?? ""),
-          platform: String(formData.get("platform") ?? "tiktok"),
+          fileName: preparedSource.sourceFile.name,
+          fileSize: preparedSource.sourceFile.size,
+          contentType: preparedSource.sourceFile.type || null,
+          title: preparedSource.title,
+          platform: preparedSource.platform,
         }),
       });
       const createResult = await readJsonResponse(createResponse);
 
       if (!createResponse.ok || !createResult.videoId || !createResult.signedUploadUrl) {
         setState("error");
-        setMessage(formatApiError(createResult, "Unable to prepare source video upload."));
-        return;
+        return {
+          ok: false as const,
+          error: formatApiError(createResult, "Unable to prepare source video upload."),
+        };
       }
 
       try {
         setMessage("Uploading source video to storage...");
-        await uploadToSignedUrl(createResult.signedUploadUrl, sourceFile);
+        await uploadToSignedUrl(createResult.signedUploadUrl, preparedSource.sourceFile);
       } catch (error) {
         setState("error");
-        setMessage(error instanceof Error ? error.message : "Unable to upload source video to storage.");
-        return;
+        return {
+          ok: false as const,
+          error: error instanceof Error ? error.message : "Unable to upload source video to storage.",
+        };
       }
 
       setMessage("Confirming source upload...");
@@ -112,25 +164,36 @@ export function VideoSubmitForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          fileName: sourceFile.name,
-          fileSize: sourceFile.size,
-          contentType: sourceFile.type || null,
+          fileName: preparedSource.sourceFile.name,
+          fileSize: preparedSource.sourceFile.size,
+          contentType: preparedSource.sourceFile.type || null,
         }),
       });
       const completeResult = await readJsonResponse(completeResponse);
 
       if (!completeResponse.ok) {
         setState("error");
-        setMessage(formatApiError(completeResult, "Unable to queue video task after upload."));
-        return;
+        return {
+          ok: false as const,
+          error: formatApiError(completeResult, "Unable to confirm source upload."),
+        };
+      }
+
+      setMessage("Queueing clipping job...");
+      const startResult = await startExistingVideoClipping(completeResult.videoId || createResult.videoId, config);
+
+      if (!startResult.ok) {
+        setState("error");
+        return startResult;
       }
 
       setState("success");
-      setMessage("Source ready. Redirecting to clipping configuration...");
+      setMessage("Clipping queued. Redirecting to detail...");
       router.push(`/videos/${completeResult.videoId || createResult.videoId}`);
-      return;
+      return { ok: true as const };
     }
 
+    setMessage("Creating source draft...");
     const response = await fetch("/api/videos", {
       method: "POST",
       headers: {
@@ -138,8 +201,8 @@ export function VideoSubmitForm() {
       },
       body: JSON.stringify({
         sourceType: "url",
-        sourceUrl,
-        title: String(formData.get("title") ?? ""),
+        sourceUrl: preparedSource.sourceUrl,
+        title: preparedSource.title,
         platformTargets: ["tiktok"],
       }),
     });
@@ -147,13 +210,86 @@ export function VideoSubmitForm() {
 
     if (!response.ok) {
       setState("error");
-      setMessage(formatApiError(result, "Unable to create video task."));
-      return;
+      return {
+        ok: false as const,
+        error: formatApiError(result, "Unable to create video task."),
+      };
+    }
+
+    if (!result.videoId) {
+      setState("error");
+      return {
+        ok: false as const,
+        error: "Video task was created without a video ID.",
+      };
+    }
+
+    setMessage("Queueing clipping job...");
+    const startResult = await startExistingVideoClipping(result.videoId, config);
+
+    if (!startResult.ok) {
+      setState("error");
+      return startResult;
     }
 
     setState("success");
-    setMessage("Video draft created. Redirecting to clipping configuration...");
+    setMessage("Clipping queued. Redirecting to detail...");
     router.push(`/videos/${result.videoId}`);
+    return { ok: true as const };
+  }
+
+  async function startExistingVideoClipping(videoId: string, config: ReapClippingConfig) {
+    const response = await fetch(`/api/videos/${videoId}/start-clipping`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(config),
+    });
+    const result = await readJsonResponse(response);
+
+    if (!response.ok) {
+      return {
+        ok: false as const,
+        error: formatApiError(result, "Unable to start clipping."),
+      };
+    }
+
+    return { ok: true as const };
+  }
+
+  if (preparedSource) {
+    const sourceLabel =
+      preparedSource.type === "file"
+        ? preparedSource.title || preparedSource.sourceFile.name
+        : preparedSource.title || preparedSource.sourceUrl;
+
+    return (
+      <div className="grid gap-5">
+        <ReapClippingConfigurator
+          sourceLabel={sourceLabel}
+          initialConfig={initialConfig}
+          onStartClipping={createAndStartClipping}
+        />
+        <button
+          type="button"
+          disabled={state === "submitting"}
+          onClick={() => {
+            setPreparedSource(null);
+            setState("idle");
+            setMessage("");
+          }}
+          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-2.5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.16em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[rgba(223,254,0,0.42)] hover:text-[#dffe00] disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Change source
+        </button>
+        {message ? (
+          <p className={`rounded-lg border px-4 py-3 text-sm font-bold ${state === "error" ? "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] text-[#ffb4ab]" : "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]"}`}>
+            {message}
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   return (
@@ -209,7 +345,7 @@ export function VideoSubmitForm() {
           disabled={state === "submitting"}
           className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
         >
-          {state === "submitting" ? "Creating draft..." : "Create clipping task"}
+          {state === "submitting" ? "Preparing..." : "Create clipping task"}
         </button>
 
         {message ? (

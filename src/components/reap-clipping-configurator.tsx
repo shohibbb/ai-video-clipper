@@ -17,9 +17,18 @@ type PresetsResponse = {
 };
 
 type ConfiguratorProps = {
-  videoId: string;
+  videoId?: string;
   sourceLabel: string;
   initialConfig: ReapClippingConfig;
+  onStartClipping?: (config: ReapClippingConfig) => Promise<
+    | {
+        ok: true;
+      }
+    | {
+        ok: false;
+        error: string;
+      }
+  >;
 };
 
 const genreOptions = [
@@ -115,7 +124,7 @@ function PresetCard({
   );
 }
 
-export function ReapClippingConfigurator({ videoId, sourceLabel, initialConfig }: ConfiguratorProps) {
+export function ReapClippingConfigurator({ videoId, sourceLabel, initialConfig, onStartClipping }: ConfiguratorProps) {
   const router = useRouter();
   const [config, setConfig] = useState<ReapClippingConfig>(initialConfig);
   const [presets, setPresets] = useState<ReapPreset[]>([]);
@@ -198,19 +207,40 @@ export function ReapClippingConfigurator({ videoId, sourceLabel, initialConfig }
     setIsSubmitting(true);
     setError("");
     setMessage("");
+    const clippingConfig = {
+      ...config,
+      topics: topicsInput
+        .split(/[,\n]/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    };
+
+    if (onStartClipping) {
+      const result = await onStartClipping(clippingConfig);
+
+      setIsSubmitting(false);
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      setMessage("Clipping queued. Redirecting...");
+      return;
+    }
+
+    if (!videoId) {
+      setIsSubmitting(false);
+      setError("Video ID is required before clipping can start.");
+      return;
+    }
 
     const response = await fetch(`/api/videos/${videoId}/start-clipping`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        ...config,
-        topics: topicsInput
-          .split(/[,\n]/)
-          .map((item) => item.trim())
-          .filter(Boolean),
-      }),
+      body: JSON.stringify(clippingConfig),
     });
     const result = (await response.json().catch(() => ({}))) as { error?: string };
 

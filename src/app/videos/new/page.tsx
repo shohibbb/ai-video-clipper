@@ -1,7 +1,10 @@
 import { AppShell } from "@/components/app-shell";
 import { VideoSubmitForm } from "@/components/video-submit-form";
+import { getDefaultReapClippingConfig } from "@/lib/reap/clipping-config";
 
 export default function NewVideoPage() {
+  const initialConfig = getDefaultReapClippingConfig();
+
   return (
     <AppShell
       eyebrow="New Task"
@@ -11,7 +14,7 @@ export default function NewVideoPage() {
     >
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          <VideoSubmitForm />
+          <VideoSubmitForm initialConfig={initialConfig} />
         </div>
 
         <aside className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl lg:col-span-4">
