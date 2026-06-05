@@ -70,12 +70,12 @@ async function createUrlVideoTask(userId: string, body: unknown) {
     },
   });
 
-  const job = await enqueueVideoOrFail(video);
+  const enqueueResult = await enqueueVideoOrFail(video);
 
-  if (!job) {
+  if (!enqueueResult.ok) {
     return NextResponse.json(
       {
-        error: "Video task was created but could not be enqueued. Check REDIS_URL and Redis availability.",
+        error: enqueueResult.errorMessage,
         videoId: video.id,
         status: "failed",
       },
@@ -87,7 +87,7 @@ async function createUrlVideoTask(userId: string, body: unknown) {
     {
       videoId: video.id,
       status: video.status,
-      jobId: job.id,
+      jobId: enqueueResult.job.id,
     },
     { status: 201 },
   );
@@ -217,12 +217,12 @@ async function createFileVideoTask(userId: string, formData: FormData) {
     },
   });
 
-  const job = await enqueueVideoOrFail(updatedVideo);
+  const enqueueResult = await enqueueVideoOrFail(updatedVideo);
 
-  if (!job) {
+  if (!enqueueResult.ok) {
     return NextResponse.json(
       {
-        error: "Video source was uploaded but could not be enqueued. Check REDIS_URL and Redis availability.",
+        error: enqueueResult.errorMessage,
         videoId: updatedVideo.id,
         status: "failed",
       },
@@ -235,7 +235,7 @@ async function createFileVideoTask(userId: string, formData: FormData) {
       videoId: updatedVideo.id,
       status: updatedVideo.status,
       sourceStoragePath: updatedVideo.sourceStoragePath,
-      jobId: job.id,
+      jobId: enqueueResult.job.id,
     },
     { status: 201 },
   );

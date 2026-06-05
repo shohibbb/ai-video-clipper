@@ -103,22 +103,22 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     },
   });
 
-  const job = await enqueueVideoOrFail(updatedVideo);
+  const enqueueResult = await enqueueVideoOrFail(updatedVideo);
 
-  if (!job) {
+  if (!enqueueResult.ok) {
     await prisma.video.update({
       where: {
         id: updatedVideo.id,
       },
       data: {
         status: "failed",
-        errorMessage: "Failed to enqueue video processing job. Check REDIS_URL and Redis availability.",
+        errorMessage: enqueueResult.errorMessage,
       },
     });
 
     return NextResponse.json(
       {
-        error: "Video source was uploaded but could not be enqueued. Check REDIS_URL and Redis availability.",
+        error: enqueueResult.errorMessage,
         videoId: updatedVideo.id,
         status: "failed",
       },
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       videoId: updatedVideo.id,
       status: updatedVideo.status,
       sourceStoragePath: updatedVideo.sourceStoragePath,
-      jobId: job.id,
+      jobId: enqueueResult.job.id,
     },
     { status: 201 },
   );
