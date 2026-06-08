@@ -5,12 +5,24 @@ x-ai-video-clipper-staging-service: &ai-video-clipper-staging-service
       required: true
   restart: unless-stopped
 
+x-ai-video-clipper-staging-worker-service: &ai-video-clipper-staging-worker-service
+  image: ai-video-clipper:staging-worker
+  build:
+    context: .
+    dockerfile: Dockerfile
+    target: worker-runner
+  env_file:
+    - path: .env.staging
+      required: true
+  restart: unless-stopped
+
 services:
   app:
     <<: *ai-video-clipper-staging-service
     build:
       context: .
       dockerfile: Dockerfile
+      target: runner
     command: ["node", "server.js"]
     ports:
       - "3001:3000"
@@ -33,17 +45,24 @@ services:
       - migrate
 
   worker-reap:
-    <<: *ai-video-clipper-staging-service
+    <<: *ai-video-clipper-staging-worker-service
     command: ["npm", "run", "worker:reap"]
 
   worker-reap-polling:
-    <<: *ai-video-clipper-staging-service
+    <<: *ai-video-clipper-staging-worker-service
     command: ["npm", "run", "worker:reap-polling"]
 
   worker-reap-publish:
-    <<: *ai-video-clipper-staging-service
+    <<: *ai-video-clipper-staging-worker-service
     command: ["npm", "run", "worker:reap-publish"]
 
   worker-reap-publish-status:
-    <<: *ai-video-clipper-staging-service
+    <<: *ai-video-clipper-staging-worker-service
     command: ["npm", "run", "worker:reap-publish-status"]
+
+  production-check:
+    <<: *ai-video-clipper-staging-worker-service
+    command: ["npm", "run", "production:check"]
+    restart: "no"
+    profiles:
+      - check

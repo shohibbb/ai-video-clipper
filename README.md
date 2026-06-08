@@ -295,10 +295,10 @@ For staging-specific container deployment, see `docs/STAGING_DEPLOYMENT.md`. The
    docker compose -f docker-compose.production.example.yml build
    ```
 
-4. Run the production preflight inside the image:
+4. Run the production preflight inside the worker/tooling image:
 
    ```bash
-   docker compose -f docker-compose.production.example.yml run --rm app npm run production:check
+   docker compose -f docker-compose.production.example.yml run --rm production-check
    ```
 
 5. Apply database migrations:

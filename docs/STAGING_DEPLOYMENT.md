@@ -62,7 +62,7 @@ npm run test
 Then validate staging env with the production preflight rules:
 
 ```bash
-docker compose -f docker-compose.staging.yml run --rm app npm run production:check
+docker compose -f docker-compose.staging.yml run --rm production-check
 ```
 
 Warnings are acceptable when understood. Errors should be fixed before continuing.

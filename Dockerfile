@@ -61,3 +61,16 @@ USER nextjs
 EXPOSE 3000
 
 CMD ["node", "server.js"]
+
+FROM base AS worker-runner
+
+ENV NODE_ENV=production
+
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app ./
+
+USER nextjs
+
+CMD ["npm", "run", "worker:reap"]
