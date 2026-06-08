@@ -314,7 +314,7 @@ The included Docker setup builds one image that can run the Next.js app, Prisma 
 7. Run smoke tests against the deployed URL:
 
    ```bash
-   STAGING_BASE_URL=https://your-staging-domain.com npm run staging:smoke
+   STAGING_BASE_URL=https://ai-video-clipper-fawn.vercel.app npm run staging:smoke
    ```
 
 Use managed Postgres and Redis for real production. The root `docker-compose.yml` remains local-development infrastructure only.
