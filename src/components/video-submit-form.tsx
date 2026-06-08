@@ -174,6 +174,7 @@ function StepIndicator({
             onClick={step.onClick}
             disabled={step.disabled}
             aria-current={isActive ? "step" : undefined}
+            suppressHydrationWarning
             className={`grid min-h-16 grid-cols-[auto_1fr] items-center gap-3 rounded-lg border px-4 text-left transition ${
               isActive
                 ? "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-white"
@@ -454,6 +455,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
             setState("idle");
             setMessage("");
           }}
+          suppressHydrationWarning
           className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-4 py-2.5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.16em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[rgba(223,254,0,0.42)] hover:text-[#dffe00] disabled:cursor-not-allowed disabled:opacity-60"
         >
           Change source
@@ -486,6 +488,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
               type="url"
               disabled={state === "submitting"}
               placeholder="https://example.com/video.mp4"
+              suppressHydrationWarning
               className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)] disabled:cursor-wait disabled:opacity-70"
             />
             <span className="text-xs font-bold text-[#909378]">Use a URL, or choose a file below. If both are set, the file upload wins.</span>
@@ -498,6 +501,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
               type="file"
               disabled={state === "submitting"}
               accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+              suppressHydrationWarning
               className="w-full rounded-lg border border-dashed border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-[#d3f000] file:px-4 file:py-2 file:font-[family-name:var(--font-mono)] file:text-xs file:font-bold file:uppercase file:tracking-[0.12em] file:text-[#2c3400] placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)] disabled:cursor-wait disabled:opacity-70"
             />
             <span className="text-xs font-bold text-[#909378]">Allowed formats: MP4, MOV, WEBM.</span>
@@ -510,6 +514,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
               type="text"
               disabled={state === "submitting"}
               placeholder="Podcast episode 17, launch webinar, customer interview..."
+              suppressHydrationWarning
               className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)] disabled:cursor-wait disabled:opacity-70"
             />
           </label>
@@ -520,6 +525,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
               name="platform"
               defaultValue="tiktok"
               disabled={state === "submitting"}
+              suppressHydrationWarning
               className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)] disabled:cursor-wait disabled:opacity-70"
             >
               <option value="tiktok">TikTok only for MVP</option>
@@ -529,6 +535,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
           <button
             type="submit"
             disabled={state === "submitting"}
+            suppressHydrationWarning
             className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {state === "submitting" ? (

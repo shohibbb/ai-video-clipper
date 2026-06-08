@@ -104,10 +104,11 @@ export async function AppShell({
               <input
                 type="search"
                 placeholder="Search tasks..."
+                suppressHydrationWarning
                 className="h-10 w-64 rounded-lg border border-transparent bg-[#161514]/70 pl-10 pr-4 text-sm text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[rgba(223,254,0,0.35)] focus:bg-[#161514]"
               />
             </label>
-            <button type="button" aria-label="Notifications" className="text-[#c6c9ab] transition hover:text-[#dffe00] active:scale-95">
+            <button type="button" aria-label="Notifications" suppressHydrationWarning className="text-[#c6c9ab] transition hover:text-[#dffe00] active:scale-95">
               <BellIcon />
             </button>
             <div className="hidden items-center gap-3 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-3 py-2 md:flex">
