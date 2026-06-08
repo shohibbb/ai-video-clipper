@@ -275,11 +275,69 @@ Reap Publish Worker → Reap API → TikTok
 - API handlers do not run long-lived automation work.
 - Reap credentials must stay server-side and must not be exposed to the frontend.
 
+## Container Deployment Overview
+
+The included Docker setup builds two runtime targets from the same Dockerfile:
+
+- `runner`: lean Next.js web runtime for `app`.
+- `worker-runner`: worker/tooling runtime for BullMQ workers, Prisma migration, health/debug scripts, and `production-check`.
+
+Do not run worker scripts or `production:check` through the `app` service. The web image is intentionally lean and may not contain tooling needed by TypeScript worker scripts. Use the dedicated `production-check`, `migrate`, and worker services shown below.
+
+Use managed Postgres and Redis for real production. The root `docker-compose.yml` remains local-development infrastructure only.
+
+## Staging Container Deployment
+
+For full notes, see `docs/STAGING_DEPLOYMENT.md`. The staging compose file uses `.env.staging`, builds `ai-video-clipper:staging` for the web app, builds `ai-video-clipper:staging-worker` for workers/tooling, and maps the web container to host port `3001`.
+
+1. Create a staging env file from the template:
+
+   ```bash
+   cp .env.staging.example .env.staging
+   ```
+
+2. Fill `.env.staging` with dedicated staging services. Do not reuse production database, Redis, or storage buckets.
+
+3. Build both staging images:
+
+   ```bash
+   docker compose -f docker-compose.staging.yml build --no-cache
+   ```
+
+4. Run preflight using the worker/tooling image:
+
+   ```bash
+   docker compose -f docker-compose.staging.yml run --rm production-check
+   ```
+
+5. Apply database migrations:
+
+   ```bash
+   docker compose -f docker-compose.staging.yml run --rm migrate
+   ```
+
+6. Start the web app and workers:
+
+   ```bash
+   docker compose -f docker-compose.staging.yml up -d app worker-reap worker-reap-polling worker-reap-publish worker-reap-publish-status
+   ```
+
+7. Check service status and logs:
+
+   ```bash
+   docker compose -f docker-compose.staging.yml ps
+   docker compose -f docker-compose.staging.yml logs --tail=100 worker-reap
+   ```
+
+8. Run smoke tests against the deployed staging URL:
+
+   ```bash
+   STAGING_BASE_URL=https://your-staging-domain.com npm run staging:smoke
+   ```
+
 ## Production Container Deployment
 
-The included Docker setup builds one image that can run the Next.js app, Prisma migrations, or any worker process.
-
-For staging-specific container deployment, see `docs/STAGING_DEPLOYMENT.md`. The staging compose file uses `.env.staging` and maps the web container to host port `3001`.
+The production compose file uses `.env.production`, builds `ai-video-clipper:production` for the web app, and builds `ai-video-clipper:production-worker` for workers/tooling.
 
 1. Create a production env file from `.env.example`:
 
@@ -287,12 +345,12 @@ For staging-specific container deployment, see `docs/STAGING_DEPLOYMENT.md`. The
    cp .env.example .env.production
    ```
 
-2. Fill `.env.production` with managed production/staging services. `npm run production:check` should report `0 errors` before deployment.
+2. Fill `.env.production` with managed production services. `production-check` should report `0 errors` before deployment.
 
-3. Build the image:
+3. Build both production images:
 
    ```bash
-   docker compose -f docker-compose.production.example.yml build
+   docker compose -f docker-compose.production.example.yml build --no-cache
    ```
 
 4. Run the production preflight inside the worker/tooling image:
@@ -313,13 +371,18 @@ For staging-specific container deployment, see `docs/STAGING_DEPLOYMENT.md`. The
    docker compose -f docker-compose.production.example.yml up -d app worker-reap worker-reap-polling worker-reap-publish worker-reap-publish-status
    ```
 
-7. Run smoke tests against the deployed URL:
+7. Check service status and worker logs:
 
    ```bash
-   STAGING_BASE_URL=https://ai-video-clipper-fawn.vercel.app npm run staging:smoke
+   docker compose -f docker-compose.production.example.yml ps
+   docker compose -f docker-compose.production.example.yml logs --tail=100 worker-reap
    ```
 
-Use managed Postgres and Redis for real production. The root `docker-compose.yml` remains local-development infrastructure only.
+8. Run smoke tests against the deployed URL:
+
+   ```bash
+   STAGING_BASE_URL=https://your-production-domain.com npm run staging:smoke
+   ```
 
 ## Staging Smoke Tests
 
