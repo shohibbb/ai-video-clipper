@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ReapClippingConfigurator } from "@/components/reap-clipping-configurator";
 import type { ReapClippingConfig } from "@/lib/reap/clipping-config";
 import { formatStorageUploadError } from "@/lib/storage/upload-errors";
 
 type SubmitState = "idle" | "submitting" | "success" | "error";
+type ActiveStep = "source" | "configure";
 type PreparedSource =
   | {
       type: "url";
@@ -99,11 +100,88 @@ async function uploadToSignedUrl(signedUploadUrl: string, sourceFile: File) {
   }
 }
 
+function StepIndicator({
+  activeStep,
+  canConfigure,
+  onSourceClick,
+  onConfigureClick,
+}: {
+  activeStep: ActiveStep;
+  canConfigure: boolean;
+  onSourceClick: () => void;
+  onConfigureClick: () => void;
+}) {
+  const steps = [
+    {
+      id: "source" as const,
+      label: "Source",
+      description: "Add URL or file",
+      disabled: false,
+      onClick: onSourceClick,
+    },
+    {
+      id: "configure" as const,
+      label: "Configure",
+      description: "Choose Reap settings",
+      disabled: !canConfigure,
+      onClick: onConfigureClick,
+    },
+  ];
+
+  return (
+    <div className="grid gap-3 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-3 shadow-[0_24px_80px_rgba(0,0,0,0.28)] sm:grid-cols-2">
+      {steps.map((step, index) => {
+        const isActive = activeStep === step.id;
+
+        return (
+          <button
+            key={step.id}
+            type="button"
+            onClick={step.onClick}
+            disabled={step.disabled}
+            aria-current={isActive ? "step" : undefined}
+            className={`grid min-h-16 grid-cols-[auto_1fr] items-center gap-3 rounded-lg border px-4 text-left transition ${
+              isActive
+                ? "border-[#dffe00] bg-[rgba(223,254,0,0.10)] text-white"
+                : "border-[rgba(223,254,0,0.10)] bg-[rgba(30,32,32,0.58)] text-[#c6c9ab] hover:border-[rgba(223,254,0,0.32)] hover:text-[#dffe00]"
+            } disabled:cursor-not-allowed disabled:opacity-50`}
+          >
+            <span
+              className={`grid size-8 place-items-center rounded-full border font-[family-name:var(--font-mono)] text-xs font-black ${
+                isActive ? "border-[#dffe00] bg-[#dffe00] text-[#2c3400]" : "border-[rgba(223,254,0,0.20)] text-[#909378]"
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span className="grid gap-1">
+              <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.20em]">{step.label}</span>
+              <span className="text-xs font-bold text-[#909378]">{step.description}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClippingConfig }) {
   const router = useRouter();
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState<string>("");
   const [preparedSource, setPreparedSource] = useState<PreparedSource | null>(null);
+  const [activeStep, setActiveStep] = useState<ActiveStep>("source");
+  const configureRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (activeStep !== "configure" || !preparedSource) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      configureRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      configureRef.current?.focus({ preventScroll: true });
+    });
+  }, [activeStep, preparedSource]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -130,6 +208,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
         title,
         platform,
       });
+      setActiveStep("configure");
       setMessage("Source selected. Configure Reap options before queueing.");
       return;
     }
@@ -141,6 +220,7 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
       title,
       platform,
     });
+    setActiveStep("configure");
     setMessage("Source selected. Configure Reap options before queueing.");
   }
 
@@ -302,18 +382,32 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
 
     return (
       <div className="grid gap-5">
-        <ReapClippingConfigurator
-          sourceLabel={sourceLabel}
-          sourceThumbnailUrl={sourceThumbnailUrl}
-          sourceMetaLabel={sourceMetaLabel}
-          initialConfig={initialConfig}
-          onStartClipping={createAndStartClipping}
+        <StepIndicator
+          activeStep={activeStep}
+          canConfigure={Boolean(preparedSource)}
+          onSourceClick={() => {
+            setPreparedSource(null);
+            setActiveStep("source");
+            setState("idle");
+            setMessage("");
+          }}
+          onConfigureClick={() => setActiveStep("configure")}
         />
+        <div ref={configureRef} tabIndex={-1} className="scroll-mt-28 outline-none">
+          <ReapClippingConfigurator
+            sourceLabel={sourceLabel}
+            sourceThumbnailUrl={sourceThumbnailUrl}
+            sourceMetaLabel={sourceMetaLabel}
+            initialConfig={initialConfig}
+            onStartClipping={createAndStartClipping}
+          />
+        </div>
         <button
           type="button"
           disabled={state === "submitting"}
           onClick={() => {
             setPreparedSource(null);
+            setActiveStep("source");
             setState("idle");
             setMessage("");
           }}
@@ -331,67 +425,75 @@ export function VideoSubmitForm({ initialConfig }: { initialConfig: ReapClipping
   }
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl">
-      <div className="grid gap-5">
-        <input type="hidden" name="sourceType" value="file" />
+    <div className="grid gap-5">
+      <StepIndicator
+        activeStep={activeStep}
+        canConfigure={false}
+        onSourceClick={() => setActiveStep("source")}
+        onConfigureClick={() => undefined}
+      />
+      <form onSubmit={handleSubmit} className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl">
+        <div className="grid gap-5">
+          <input type="hidden" name="sourceType" value="file" />
 
-        <label className="grid gap-2">
-          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Video URL</span>
-          <input
-            name="sourceUrl"
-            type="url"
-            placeholder="https://example.com/video.mp4"
-            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
-          />
-          <span className="text-xs font-bold text-[#909378]">Use a URL, or choose a file below. If both are set, the file upload wins.</span>
-        </label>
+          <label className="grid gap-2">
+            <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Video URL</span>
+            <input
+              name="sourceUrl"
+              type="url"
+              placeholder="https://example.com/video.mp4"
+              className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
+            />
+            <span className="text-xs font-bold text-[#909378]">Use a URL, or choose a file below. If both are set, the file upload wins.</span>
+          </label>
 
-        <label className="grid gap-2">
-          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Source file</span>
-          <input
-            name="sourceFile"
-            type="file"
-            accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
-            className="w-full rounded-lg border border-dashed border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-[#d3f000] file:px-4 file:py-2 file:font-[family-name:var(--font-mono)] file:text-xs file:font-bold file:uppercase file:tracking-[0.12em] file:text-[#2c3400] placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
-          />
-          <span className="text-xs font-bold text-[#909378]">Allowed formats: MP4, MOV, WEBM.</span>
-        </label>
+          <label className="grid gap-2">
+            <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Source file</span>
+            <input
+              name="sourceFile"
+              type="file"
+              accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+              className="w-full rounded-lg border border-dashed border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition file:mr-4 file:rounded-lg file:border-0 file:bg-[#d3f000] file:px-4 file:py-2 file:font-[family-name:var(--font-mono)] file:text-xs file:font-bold file:uppercase file:tracking-[0.12em] file:text-[#2c3400] placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
+            />
+            <span className="text-xs font-bold text-[#909378]">Allowed formats: MP4, MOV, WEBM.</span>
+          </label>
 
-        <label className="grid gap-2">
-          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Working title</span>
-          <input
-            name="title"
-            type="text"
-            placeholder="Podcast episode 17, launch webinar, customer interview..."
-            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
-          />
-        </label>
+          <label className="grid gap-2">
+            <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Working title</span>
+            <input
+              name="title"
+              type="text"
+              placeholder="Podcast episode 17, launch webinar, customer interview..."
+              className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
+            />
+          </label>
 
-        <label className="grid gap-2">
-          <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Target platform</span>
-          <select
-            name="platform"
-            defaultValue="tiktok"
-            className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
+          <label className="grid gap-2">
+            <span className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#39ff14]">Target platform</span>
+            <select
+              name="platform"
+              defaultValue="tiktok"
+              className="w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[#161514] px-4 py-3.5 text-[#e2e2e1] outline-none transition placeholder:text-[#909378] focus:border-[#dffe00] focus:shadow-[0_0_0_4px_rgba(223,254,0,0.10)]"
+            >
+              <option value="tiktok">TikTok only for MVP</option>
+            </select>
+          </label>
+
+          <button
+            type="submit"
+            disabled={state === "submitting"}
+            className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           >
-            <option value="tiktok">TikTok only for MVP</option>
-          </select>
-        </label>
+            {state === "submitting" ? "Preparing..." : "Create clipping task"}
+          </button>
 
-        <button
-          type="submit"
-          disabled={state === "submitting"}
-          className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-[#d3f000] px-5 py-3 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.18em] text-[#2c3400] transition hover:-translate-y-0.5 hover:bg-[#39ff14] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-        >
-          {state === "submitting" ? "Preparing..." : "Create clipping task"}
-        </button>
-
-        {message ? (
-          <p className={`rounded-lg border px-4 py-3 text-sm font-bold ${state === "error" ? "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] text-[#ffb4ab]" : "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]"}`}>
-            {message}
-          </p>
-        ) : null}
-      </div>
-    </form>
+          {message ? (
+            <p className={`rounded-lg border px-4 py-3 text-sm font-bold ${state === "error" ? "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] text-[#ffb4ab]" : "border-[#39ff14] bg-[rgba(57,255,20,0.10)] text-[#39ff14]"}`}>
+              {message}
+            </p>
+          ) : null}
+        </div>
+      </form>
+    </div>
   );
 }
