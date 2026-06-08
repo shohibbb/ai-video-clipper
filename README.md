@@ -279,6 +279,8 @@ Reap Publish Worker → Reap API → TikTok
 
 The included Docker setup builds one image that can run the Next.js app, Prisma migrations, or any worker process.
 
+For staging-specific container deployment, see `docs/STAGING_DEPLOYMENT.md`. The staging compose file uses `.env.staging` and maps the web container to host port `3001`.
+
 1. Create a production env file from `.env.example`:
 
    ```bash

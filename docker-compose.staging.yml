@@ -1,0 +1,49 @@
+x-ai-video-clipper-staging-service: &ai-video-clipper-staging-service
+  image: ai-video-clipper:staging
+  env_file:
+    - path: .env.staging
+      required: true
+  restart: unless-stopped
+
+services:
+  app:
+    <<: *ai-video-clipper-staging-service
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "server.js"]
+    ports:
+      - "3001:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  migrate:
+    <<: *ai-video-clipper-staging-service
+    command: ["npm", "run", "prisma:deploy"]
+    restart: "no"
+    profiles:
+      - migrate
+
+  worker-reap:
+    <<: *ai-video-clipper-staging-service
+    command: ["npm", "run", "worker:reap"]
+
+  worker-reap-polling:
+    <<: *ai-video-clipper-staging-service
+    command: ["npm", "run", "worker:reap-polling"]
+
+  worker-reap-publish:
+    <<: *ai-video-clipper-staging-service
+    command: ["npm", "run", "worker:reap-publish"]
+
+  worker-reap-publish-status:
+    <<: *ai-video-clipper-staging-service
+    command: ["npm", "run", "worker:reap-publish-status"]
