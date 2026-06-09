@@ -381,7 +381,7 @@ The production compose file uses `.env.production`, builds `ai-video-clipper:pro
 8. Run smoke tests against the deployed URL:
 
    ```bash
-   STAGING_BASE_URL=https://your-production-domain.com npm run staging:smoke
+   STAGING_BASE_URL=https://ai-video-clipper-fawn.vercel.app npm run staging:smoke
    ```
 
 ## Staging Smoke Tests
