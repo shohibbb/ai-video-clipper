@@ -130,6 +130,110 @@ function validateConnectionUrl(
   }
 }
 
+function parseConnectionUrl(value: string | undefined) {
+  if (!hasValue(value) || hasPlaceholderValue(value)) {
+    return null;
+  }
+
+  try {
+    return new URL(value!);
+  } catch {
+    return null;
+  }
+}
+
+function validatePoolInteger(
+  url: URL,
+  parameter: "connection_limit" | "pool_timeout",
+  results: ProductionCheckResult[],
+) {
+  const value = url.searchParams.get(parameter);
+  const parsedValue = Number(value);
+
+  if (!value || !Number.isInteger(parsedValue) || parsedValue <= 0) {
+    results.push({
+      name: `DATABASE_URL ${parameter}`,
+      severity: "error",
+      message: `DATABASE_URL must set ${parameter} to a positive integer.`,
+    });
+    return null;
+  }
+
+  return parsedValue;
+}
+
+function validateDatabasePool(env: Env, results: ProductionCheckResult[]) {
+  const databaseUrl = parseConnectionUrl(env.DATABASE_URL);
+
+  if (databaseUrl) {
+    const connectionLimit = validatePoolInteger(databaseUrl, "connection_limit", results);
+    const poolTimeout = validatePoolInteger(databaseUrl, "pool_timeout", results);
+
+    if (connectionLimit === 1) {
+      results.push({
+        name: "DATABASE_URL connection_limit",
+        severity: "ok",
+        message: "DATABASE_URL limits each process to one Prisma connection.",
+      });
+    } else if (connectionLimit !== null) {
+      results.push({
+        name: "DATABASE_URL connection_limit",
+        severity: "error",
+        message: "DATABASE_URL connection_limit must be 1 for the current 15-client production pool budget.",
+      });
+    }
+
+    if (poolTimeout !== null) {
+      results.push({
+        name: "DATABASE_URL pool_timeout",
+        severity: "ok",
+        message: "DATABASE_URL has a bounded Prisma pool timeout.",
+      });
+    }
+
+    if (databaseUrl.hostname.endsWith(".pooler.supabase.com")) {
+      if (databaseUrl.port === "6543") {
+        results.push({
+          name: "DATABASE_URL Supabase mode",
+          severity: "ok",
+          message: "DATABASE_URL uses Supabase transaction mode on port 6543.",
+        });
+      } else if (!databaseUrl.port || databaseUrl.port === "5432") {
+        results.push({
+          name: "DATABASE_URL Supabase mode",
+          severity: "warning",
+          message: "DATABASE_URL uses Supabase session mode; reserve this for long-lived worker processes, not Vercel.",
+        });
+      } else {
+        results.push({
+          name: "DATABASE_URL Supabase mode",
+          severity: "warning",
+          message: "DATABASE_URL uses an unrecognized Supabase pooler port.",
+        });
+      }
+    }
+  }
+
+  const directUrl = parseConnectionUrl(env.DIRECT_URL);
+
+  if (
+    directUrl?.hostname.endsWith(".pooler.supabase.com")
+    && directUrl.port === "6543"
+  ) {
+    results.push({
+      name: "DIRECT_URL Supabase mode",
+      severity: "error",
+      message: "DIRECT_URL must not use Supabase transaction mode on port 6543; use a direct or session-mode migration URL.",
+    });
+  } else if (directUrl) {
+    results.push({
+      name: "DIRECT_URL migration mode",
+      severity: "ok",
+      message: "DIRECT_URL is suitable for Prisma migration commands.",
+    });
+  }
+}
+
 function requireSecret(env: Env, name: string, results: ProductionCheckResult[], minimumLength = 32) {
   const value = env[name];
 
@@ -348,6 +452,8 @@ export function validateProductionEnv(env: Env = process.env): ProductionCheckRe
   validateOAuth(env, results);
 
   validateConnectionUrl(env.DATABASE_URL, "DATABASE_URL", ["postgresql:", "postgres:"], results);
+  validateConnectionUrl(env.DIRECT_URL, "DIRECT_URL", ["postgresql:", "postgres:"], results);
+  validateDatabasePool(env, results);
   validateConnectionUrl(env.REDIS_URL, "REDIS_URL", ["redis:", "rediss:"], results);
   validateStorage(env, results);
   requireSecret(env, "REAP_API_KEY", results, 16);

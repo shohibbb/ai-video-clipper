@@ -286,6 +286,27 @@ Do not run worker scripts or `production:check` through the `app` service. The w
 
 Use managed Postgres and Redis for real production. The root `docker-compose.yml` remains local-development infrastructure only.
 
+### Supabase and Prisma connection budgets
+
+Do not reuse the same Supabase pooler mode blindly across Vercel and the VPS workers:
+
+```bash
+# Vercel web app: transaction mode for serverless/auto-scaling requests
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&pool_timeout=20"
+
+# Prisma migration commands: direct or session-mode connection
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+```
+
+For the VPS worker `.env.production`, use the session pooler with a strict per-process budget:
+
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+```
+
+The production compose starts four worker processes. With `connection_limit=1`, their maximum Prisma allocation is four database connections. Increase this only after checking Supabase connection metrics and accounting for every running app, worker, migration, and deployment instance.
+
 ## Staging Container Deployment
 
 For full notes, see `docs/STAGING_DEPLOYMENT.md`. The staging compose file uses `.env.staging`, builds `ai-video-clipper:staging` for the web app, builds `ai-video-clipper:staging-worker` for workers/tooling, and maps the web container to host port `3001`.
@@ -345,7 +366,7 @@ The production compose file uses `.env.production`, builds `ai-video-clipper:pro
    cp .env.example .env.production
    ```
 
-2. Fill `.env.production` with managed production services. `production-check` should report `0 errors` before deployment.
+2. Fill `.env.production` with managed production services. Set both `DATABASE_URL` and `DIRECT_URL`, including `connection_limit=1` and `pool_timeout=20`. `production-check` should report `0 errors` before deployment. A Supabase session-mode warning is expected on a worker-only VPS.
 
 3. Build both production images:
 

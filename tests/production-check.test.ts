@@ -10,7 +10,8 @@ const validEnv = {
   ALLOW_DEV_AUTH: "false",
   AUTH_GOOGLE_ID: "google-client-id",
   AUTH_GOOGLE_SECRET: "google-client-secret",
-  DATABASE_URL: "postgresql://user:pass@db.example.com:5432/app",
+  DATABASE_URL: "postgresql://user:pass@db.example.com:6543/app?connection_limit=1&pool_timeout=20",
+  DIRECT_URL: "postgresql://user:pass@db.example.com:5432/app",
   REDIS_URL: "redis://redis.example.com:6379",
   STORAGE_PROVIDER: "supabase",
   SUPABASE_URL: "https://project.supabase.co",
@@ -72,6 +73,53 @@ test("rejects localhost database and Redis URLs", () => {
 
   assert.ok(errors.some((error) => error.name === "DATABASE_URL"));
   assert.ok(errors.some((error) => error.name === "REDIS_URL"));
+});
+
+test("rejects an unsafe Prisma connection budget", () => {
+  const errors = errorsFor({
+    ...validEnv,
+    DATABASE_URL: "postgresql://user:pass@db.example.com:6543/app?connection_limit=4",
+  });
+
+  assert.ok(errors.some((error) => error.name === "DATABASE_URL connection_limit"));
+  assert.ok(errors.some((error) => error.name === "DATABASE_URL pool_timeout"));
+});
+
+test("detects Supabase transaction and session pooler modes without exposing credentials", () => {
+  const transactionResults = validateProductionEnv({
+    ...validEnv,
+    DATABASE_URL: "postgresql://secret-user:secret-pass@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?connection_limit=1&pool_timeout=20",
+    DIRECT_URL: "postgresql://secret-user:secret-pass@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres",
+  });
+  const sessionResults = validateProductionEnv({
+    ...validEnv,
+    DATABASE_URL: "postgresql://secret-user:secret-pass@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20",
+  });
+
+  assert.ok(
+    transactionResults.some(
+      (result) => result.name === "DATABASE_URL Supabase mode" && result.severity === "ok",
+    ),
+  );
+  assert.ok(
+    sessionResults.some(
+      (result) => result.name === "DATABASE_URL Supabase mode" && result.severity === "warning",
+    ),
+  );
+  assert.ok(
+    [...transactionResults, ...sessionResults].every(
+      (result) => !result.message.includes("secret-user") && !result.message.includes("secret-pass"),
+    ),
+  );
+});
+
+test("rejects a Supabase transaction pooler URL for migrations", () => {
+  const errors = errorsFor({
+    ...validEnv,
+    DIRECT_URL: "postgresql://user:pass@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres",
+  });
+
+  assert.ok(errors.some((error) => error.name === "DIRECT_URL Supabase mode"));
 });
 
 test("rejects Reap rate limits above documented production cap", () => {

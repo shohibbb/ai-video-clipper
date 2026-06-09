@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const user = await requireCurrentUser();
   const authDurationMs = performance.now() - authStartedAt;
   const queryStartedAt = performance.now();
-  const [totalVideos, totalClips, completedUploads, failedVideos, failedUploads, recentVideos] = await Promise.all([
+  const [totalVideos, totalClips, completedUploads, failedVideos, failedUploads, recentVideos] = await prisma.$transaction([
     prisma.video.count({
       where: {
         userId: user.id,

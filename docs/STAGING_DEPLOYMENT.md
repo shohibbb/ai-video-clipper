@@ -29,7 +29,8 @@ NEXT_PUBLIC_APP_URL=https://staging.your-domain.com
 NEXTAUTH_URL=https://staging.your-domain.com
 NEXTAUTH_SECRET=<32+ char secret>
 ALLOW_DEV_AUTH=false
-DATABASE_URL=<staging postgres url>
+DATABASE_URL=<staging runtime postgres url with connection_limit=1 and pool_timeout=20>
+DIRECT_URL=<staging direct or session-mode migration url>
 REDIS_URL=<staging redis url>
 SUPABASE_URL=<staging supabase url>
 SUPABASE_SERVICE_ROLE_KEY=<staging service role key>
@@ -37,6 +38,20 @@ SUPABASE_STORAGE_BUCKET=clips-staging
 REAP_API_KEY=<staging or low-risk Reap API key>
 REAP_WEBHOOK_SECRET=<32+ char webhook secret>
 ```
+
+For Supabase, use transaction mode on port `6543` for a serverless web deployment and session mode on port `5432` for the long-lived VPS workers:
+
+```bash
+# Vercel
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1&pool_timeout=20"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+
+# VPS workers
+DATABASE_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+DIRECT_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?connection_limit=1&pool_timeout=20"
+```
+
+Four worker containers share the database budget. Keep `connection_limit=1` per worker until Supabase metrics show enough spare capacity.
 
 If Google OAuth is enabled, add this callback URL in Google Cloud:
 
