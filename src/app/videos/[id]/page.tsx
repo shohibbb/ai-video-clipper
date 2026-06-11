@@ -7,10 +7,17 @@ import { ClipUploadPanel } from "@/components/clip-upload-panel";
 import { ReapClippingConfigurator } from "@/components/reap-clipping-configurator";
 import { RetryVideoButton } from "@/components/retry-actions";
 import { StatusBadge } from "@/components/status-badge";
+import { VideoProcessingProgress } from "@/components/video-processing-progress";
 import { requireCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readReapClippingConfig } from "@/lib/reap/clipping-config";
 import { getStorageService } from "@/lib/storage";
+import { isVideoProcessingStatus } from "@/lib/video-processing-progress";
+import {
+  getYouTubeThumbnailUrl,
+  isDirectVideoUrl,
+  type VideoSourcePreview,
+} from "@/lib/video-source-preview";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +74,43 @@ async function resolveClipPreviewUrl(clip: { previewUrl: string | null; storageP
       resolvedPreviewUrl: null,
       previewError: error instanceof Error ? error.message : "Unable to create a signed preview URL.",
     };
+  }
+}
+
+async function resolveSourcePreview(video: {
+  sourceUrl: string | null;
+  sourceStoragePath: string | null;
+}): Promise<VideoSourcePreview | null> {
+  if (video.sourceUrl) {
+    const thumbnailUrl = getYouTubeThumbnailUrl(video.sourceUrl);
+
+    if (thumbnailUrl) {
+      return {
+        kind: "image",
+        url: thumbnailUrl,
+      };
+    }
+
+    if (isDirectVideoUrl(video.sourceUrl)) {
+      return {
+        kind: "video",
+        url: video.sourceUrl,
+      };
+    }
+  }
+
+  if (!video.sourceStoragePath) {
+    return null;
+  }
+
+  try {
+    const signedUrl = await getStorageService().getSignedUrl(video.sourceStoragePath, 60 * 30);
+    return {
+      kind: "video",
+      url: signedUrl.signedUrl,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -141,13 +185,19 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
 
   const displayTitle = video.title || video.sourceUrl || video.sourceStoragePath || "Untitled video task";
   const canConfigureClipping = ["pending", "failed", "cancelled"].includes(video.status);
+  const isProcessing = isVideoProcessingStatus(video.status);
+  const sourcePreview = isProcessing ? await resolveSourcePreview(video) : null;
   const clippingConfig = readReapClippingConfig(video.reapConfig);
 
   return (
     <AppShell
       eyebrow="Video Detail"
-      title="Review clips, tune captions, keep the queue honest."
-      description="Clip preview and metadata editing are live. Caption generation is intentionally safe and returns a clear placeholder when no AI key is configured."
+      title={isProcessing ? "Your video is moving through the clipping pipeline." : "Review clips, tune captions, keep the queue honest."}
+      description={
+        isProcessing
+          ? "Follow each workflow stage here. This page refreshes automatically while Reap processes and stores your clips."
+          : "Clip preview and metadata editing are live. Caption generation is intentionally safe and returns a clear placeholder when no AI key is configured."
+      }
       activeHref="/videos"
     >
       <div className="grid gap-5 lg:grid-cols-12">
@@ -198,18 +248,32 @@ export default async function VideoDetailPage({ params }: VideoDetailPageProps) 
         <section className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl lg:col-span-8">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">Clip Review</p>
+              <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">
+                {isProcessing ? "Processing Monitor" : "Clip Review"}
+              </p>
               <h2 className="mt-2 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em] text-white">
-                {clips.length ? `${clips.length} clip${clips.length === 1 ? "" : "s"} ready for metadata` : "No clips generated yet"}
+                {isProcessing
+                  ? "Clips are being prepared"
+                  : clips.length
+                    ? `${clips.length} clip${clips.length === 1 ? "" : "s"} ready for metadata`
+                    : "No clips generated yet"}
               </h2>
             </div>
             <p className="max-w-md text-sm leading-6 text-[#c6c9ab]">
-              Prepare metadata, then queue TikTok upload through the Reap publish worker.
+              {isProcessing
+                ? "You can leave this page. Processing continues in the worker and the latest stage will appear here."
+                : "Prepare metadata, then queue TikTok upload through the Reap publish worker."}
             </p>
           </div>
 
           <div className="mt-6 grid gap-6">
-            {clips.length ? (
+            {isProcessing ? (
+              <VideoProcessingProgress
+                status={video.status}
+                sourceTitle={displayTitle}
+                sourcePreview={sourcePreview}
+              />
+            ) : clips.length ? (
               clips.map((clip, index) => (
                 <article key={clip.id} className="grid items-start gap-5 rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] p-4 lg:grid-cols-[minmax(15rem,0.62fr)_1fr]">
                   <ClipPreview
