@@ -32,11 +32,21 @@ ALLOW_DEV_AUTH=false
 DATABASE_URL=<staging runtime postgres url with connection_limit=1 and pool_timeout=20>
 DIRECT_URL=<staging direct or session-mode migration url>
 REDIS_URL=<staging redis url>
+REDIS_MONTHLY_COMMAND_QUOTA=500000
+REDIS_PLANNED_VIDEOS_PER_MONTH=100
+REDIS_PLANNED_PUBLISHES_PER_MONTH=100
+BULLMQ_DRAIN_DELAY_SECONDS=300
+BULLMQ_STALLED_INTERVAL_MS=300000
 SUPABASE_URL=<staging supabase url>
 SUPABASE_SERVICE_ROLE_KEY=<staging service role key>
 SUPABASE_STORAGE_BUCKET=clips-staging
 REAP_API_KEY=<staging or low-risk Reap API key>
 REAP_WEBHOOK_SECRET=<32+ char webhook secret>
+REAP_POLLING_INITIAL_DELAY_MS=900000
+REAP_POLL_INTERVAL_MS=300000
+REAP_POLL_TIMEOUT_MS=7200000
+REAP_PUBLISH_STATUS_INTERVAL_MS=120000
+REAP_PUBLISH_STATUS_TIMEOUT_MS=7200000
 ```
 
 For Supabase, use transaction mode on port `6543` for a serverless web deployment and session mode on port `5432` for the long-lived VPS workers:
@@ -52,6 +62,8 @@ DIRECT_URL="postgresql://USER:PASSWORD@HOST.pooler.supabase.com:5432/postgres?co
 ```
 
 Five worker containers share the database budget. Keep `connection_limit=1` per worker until Supabase metrics show enough spare capacity.
+
+The staging template also enables the Upstash 500k low-command profile. Run `npm run redis:budget` before deployment and adjust the planned video/publish counts to expected traffic. The result models idle maintenance and delayed-job wake cycles, but not every job lifecycle command, so keep monitoring provider usage and do not schedule external `/api/health` probes more frequently than every five minutes.
 
 If Google OAuth is enabled, add this callback URL in Google Cloud:
 

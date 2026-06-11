@@ -190,7 +190,7 @@ Reap sends webhooks when projects complete. For production:
 
 5. Set `REAP_WEBHOOK_REQUIRE_TIMESTAMP=true` only when Reap sends timestamped webhook signatures. Keep it `false` otherwise so valid Reap callbacks are not rejected.
 
-6. The webhook handler queues idempotent clip download work. A polling fallback starts only if the webhook has not handled the project within five minutes.
+6. The webhook handler queues idempotent clip download work. A quota-conscious polling fallback starts only if the webhook has not handled the project within fifteen minutes.
 
 ## Automatic Polling Fallback
 
@@ -201,7 +201,7 @@ npm run worker:reap-polling
 npm run worker:reap-download
 ```
 
-Webhook delivery is the primary path. The fallback waits 5 minutes, then checks Reap every 60 seconds for up to 2 hours. When either path detects completion, it enqueues the same deterministic clip download job.
+Webhook delivery is the primary path. The fallback waits 15 minutes, then checks Reap every 5 minutes for up to 2 hours. When either path detects completion, it enqueues the same deterministic clip download job.
 
 You can also perform a one-time diagnostic status check via API:
 
@@ -268,7 +268,7 @@ Reap Publish Worker → Reap API → TikTok
 - Video processing jobs are enqueued in BullMQ using `REDIS_URL`.
 - `npm run worker:reap` starts the worker that uploads source videos to Reap and creates clip projects.
 - `POST /api/reap/webhook` receives Reap project completion callbacks and queues clip download work.
-- `npm run worker:reap-polling` starts after a five-minute delay and recovers missed Reap webhooks.
+- `npm run worker:reap-polling` starts after a fifteen-minute delay and checks every five minutes to recover missed Reap webhooks.
 - `npm run worker:reap-download` downloads and stores completed project clips for both webhook and polling paths.
 - `/videos/:id` shows clip previews and editable title, caption, and hashtag metadata when clip rows exist.
 - `POST /api/clips/:id/generate-caption` uses a safe placeholder caption service. If `OPENAI_API_KEY` is missing, it returns and stores a clear placeholder response instead of calling an external API.
@@ -278,11 +278,33 @@ Reap Publish Worker → Reap API → TikTok
 - The publish worker retries failed TikTok uploads up to 3 attempts with a 5 minute fixed delay.
 - Reap API calls are globally rate-limited through Redis by `REAP_RATE_LIMIT_MAX_REQUESTS` and `REAP_RATE_LIMIT_WINDOW_MS`.
 - `npm run worker:health` prints Redis ping status, BullMQ queue counts, and database job counts.
+- `npm run redis:budget` prints the modeled 30-day BullMQ maintenance floor and remaining command quota.
 - `GET /api/health` checks database and Redis reachability for app/container health checks.
 - API JSON request bodies use Zod validation and return field-level validation details.
 - Dashboard and video ledger pages show live database-backed error states and retry buttons.
 - API handlers do not run long-lived automation work.
 - Reap credentials must stay server-side and must not be exposed to the frontend.
+
+### Upstash 500k command profile
+
+Five always-on BullMQ workers consume Redis commands even when queues are empty. The default production profile therefore uses:
+
+```env
+REDIS_MONTHLY_COMMAND_QUOTA=500000
+REDIS_PLANNED_VIDEOS_PER_MONTH=100
+REDIS_PLANNED_PUBLISHES_PER_MONTH=100
+BULLMQ_DRAIN_DELAY_SECONDS=300
+BULLMQ_STALLED_INTERVAL_MS=300000
+REAP_POLLING_INITIAL_DELAY_MS=900000
+REAP_POLL_INTERVAL_MS=300000
+REAP_POLL_TIMEOUT_MS=7200000
+REAP_PUBLISH_STATUS_INTERVAL_MS=120000
+REAP_PUBLISH_STATUS_TIMEOUT_MS=7200000
+```
+
+With five workers, idle maintenance is modeled at about `86,400` command cycles per 30 days. BullMQ also wakes periodically while delayed jobs exist; at the planning inputs above, the modeled known usage is about `239,400` commands, leaving roughly `260,600` commands for job lifecycle operations, failures, rate limiting, health checks, and monitoring.
+
+This is not a billing guarantee. Adjust the two planning inputs, run `npm run redis:budget`, monitor the Upstash usage dashboard, and avoid probing `/api/health` more often than every five minutes. If the estimate consumes more than half the quota or real usage trends above it, move Redis to the VPS or use an Upstash fixed/paid plan.
 
 ## Container Deployment Overview
 

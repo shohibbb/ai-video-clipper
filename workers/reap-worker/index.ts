@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { QueueEvents, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import { prisma } from "../../src/lib/prisma";
 import {
   VIDEO_PROCESSING_QUEUE_NAME,
@@ -7,6 +7,7 @@ import {
 } from "../../src/lib/queue/video-queue";
 import type { VideoProcessingJobData } from "../../src/lib/queue/video-queue";
 import { createWorkerRedisConnection } from "../../src/lib/queue/redis";
+import { getBullMqWorkerMaintenanceOptions } from "../../src/lib/queue/worker-options";
 import { processReapVideoJob } from "./processor";
 
 function getWorkerConcurrency() {
@@ -15,15 +16,11 @@ function getWorkerConcurrency() {
 }
 
 const workerConnection = createWorkerRedisConnection("ai-video-clipper-reap-worker");
-const eventsConnection = createWorkerRedisConnection("ai-video-clipper-reap-events");
 
 const worker = new Worker<VideoProcessingJobData>(VIDEO_PROCESSING_QUEUE_NAME, processReapVideoJob, {
   connection: workerConnection,
   concurrency: getWorkerConcurrency(),
-});
-
-const queueEvents = new QueueEvents(VIDEO_PROCESSING_QUEUE_NAME, {
-  connection: eventsConnection,
+  ...getBullMqWorkerMaintenanceOptions(),
 });
 
 worker.on("ready", () => {
@@ -38,11 +35,7 @@ worker.on("failed", (job, error) => {
   console.error(`[reap-worker] Job ${job?.id ?? "unknown"} failed: ${error.message}`);
 });
 
-queueEvents.on("waiting", ({ jobId }) => {
-  console.log(`[reap-worker] Job ${jobId} waiting`);
-});
-
-queueEvents.on("stalled", ({ jobId }) => {
+worker.on("stalled", (jobId) => {
   console.warn(`[reap-worker] Job ${jobId} stalled`);
 });
 
@@ -50,9 +43,7 @@ async function shutdown(signal: string) {
   console.log(`[reap-worker] Received ${signal}; shutting down`);
 
   await worker.close();
-  await queueEvents.close();
   await workerConnection.quit();
-  await eventsConnection.quit();
   await prisma.$disconnect();
 
   process.exit(0);

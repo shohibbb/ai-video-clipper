@@ -7,6 +7,7 @@ import {
   type ReapClipDownloadJobData,
 } from "@/lib/queue/reap-clip-download-queue";
 import { createWorkerRedisConnection } from "@/lib/queue/redis";
+import { getBullMqWorkerMaintenanceOptions } from "@/lib/queue/worker-options";
 import { storeReapProjectClips } from "@/lib/services/reap-clips";
 
 export async function processReapClipDownloadJob(job: {
@@ -68,6 +69,7 @@ export function startReapClipDownloadWorker(concurrency = 1) {
     {
       connection: createWorkerRedisConnection("ai-video-clipper-reap-download-worker"),
       concurrency,
+      ...getBullMqWorkerMaintenanceOptions(),
     },
   );
 

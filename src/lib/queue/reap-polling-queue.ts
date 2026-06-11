@@ -15,8 +15,8 @@ function getPositiveIntegerEnv(name: string, fallback: number) {
 }
 
 export function getReapPollingConfig() {
-  const initialDelayMs = getPositiveIntegerEnv("REAP_POLLING_INITIAL_DELAY_MS", 300_000);
-  const intervalMs = getPositiveIntegerEnv("REAP_POLL_INTERVAL_MS", 60_000);
+  const initialDelayMs = getPositiveIntegerEnv("REAP_POLLING_INITIAL_DELAY_MS", 900_000);
+  const intervalMs = getPositiveIntegerEnv("REAP_POLL_INTERVAL_MS", 300_000);
   const timeoutMs = getPositiveIntegerEnv("REAP_POLL_TIMEOUT_MS", 7_200_000);
 
   return {

@@ -1,3 +1,5 @@
+import { estimateRedisCommandBudget } from "@/lib/queue/worker-options";
+
 export type ProductionCheckSeverity = "ok" | "warning" | "error";
 
 export type ProductionCheckResult = {
@@ -343,23 +345,23 @@ function validateProductionRateLimit(env: Env, results: ProductionCheckResult[])
 }
 
 function validatePollingFallback(env: Env, results: ProductionCheckResult[]) {
-  const initialDelayMs = Number(env.REAP_POLLING_INITIAL_DELAY_MS ?? "300000");
-  const intervalMs = Number(env.REAP_POLL_INTERVAL_MS ?? "60000");
+  const initialDelayMs = Number(env.REAP_POLLING_INITIAL_DELAY_MS ?? "900000");
+  const intervalMs = Number(env.REAP_POLL_INTERVAL_MS ?? "300000");
   const timeoutMs = Number(env.REAP_POLL_TIMEOUT_MS ?? "7200000");
 
-  if (!Number.isFinite(initialDelayMs) || initialDelayMs < 300_000) {
+  if (!Number.isFinite(initialDelayMs) || initialDelayMs < 900_000) {
     results.push({
       name: "REAP_POLLING_INITIAL_DELAY_MS",
       severity: "error",
-      message: "REAP_POLLING_INITIAL_DELAY_MS must be at least 300000 so webhook delivery remains primary.",
+      message: "REAP_POLLING_INITIAL_DELAY_MS must be at least 900000 in the low-command webhook-first profile.",
     });
   }
 
-  if (!Number.isFinite(intervalMs) || intervalMs < 60_000) {
+  if (!Number.isFinite(intervalMs) || intervalMs < 300_000) {
     results.push({
       name: "REAP_POLL_INTERVAL_MS",
       severity: "error",
-      message: "REAP_POLL_INTERVAL_MS must be at least 60000 to protect the Reap API rate limit.",
+      message: "REAP_POLL_INTERVAL_MS must be at least 300000 in the low-command webhook-first profile.",
     });
   }
 
@@ -368,6 +370,109 @@ function validatePollingFallback(env: Env, results: ProductionCheckResult[]) {
       name: "REAP_POLL_TIMEOUT_MS",
       severity: "error",
       message: "REAP_POLL_TIMEOUT_MS must be at least 7200000 for the two-hour fallback window.",
+    });
+  }
+}
+
+function validateRedisCommandBudget(env: Env, results: ProductionCheckResult[]) {
+  const drainDelaySeconds = Number(env.BULLMQ_DRAIN_DELAY_SECONDS ?? "300");
+  const stalledIntervalMs = Number(env.BULLMQ_STALLED_INTERVAL_MS ?? "300000");
+  const publishIntervalMs = Number(env.REAP_PUBLISH_STATUS_INTERVAL_MS ?? "120000");
+  const publishTimeoutMs = Number(env.REAP_PUBLISH_STATUS_TIMEOUT_MS ?? "7200000");
+  const monthlyQuota = Number(env.REDIS_MONTHLY_COMMAND_QUOTA ?? "500000");
+  const plannedVideos = Number(env.REDIS_PLANNED_VIDEOS_PER_MONTH ?? "100");
+  const plannedPublishes = Number(env.REDIS_PLANNED_PUBLISHES_PER_MONTH ?? "100");
+  const reapInitialDelayMs = Number(env.REAP_POLLING_INITIAL_DELAY_MS ?? "900000");
+  const reapTimeoutMs = Number(env.REAP_POLL_TIMEOUT_MS ?? "7200000");
+
+  if (!Number.isFinite(drainDelaySeconds) || drainDelaySeconds < 300) {
+    results.push({
+      name: "BULLMQ_DRAIN_DELAY_SECONDS",
+      severity: "error",
+      message: "BULLMQ_DRAIN_DELAY_SECONDS must be at least 300 for the Upstash low-command profile.",
+    });
+  } else {
+    results.push({
+      name: "BULLMQ_DRAIN_DELAY_SECONDS",
+      severity: "ok",
+      message: "BullMQ empty-queue long polling is configured for low Redis command usage.",
+    });
+  }
+
+  if (!Number.isFinite(stalledIntervalMs) || stalledIntervalMs < 300_000) {
+    results.push({
+      name: "BULLMQ_STALLED_INTERVAL_MS",
+      severity: "error",
+      message: "BULLMQ_STALLED_INTERVAL_MS must be at least 300000 for the Upstash low-command profile.",
+    });
+  } else {
+    results.push({
+      name: "BULLMQ_STALLED_INTERVAL_MS",
+      severity: "ok",
+      message: "BullMQ stalled recovery remains enabled with a quota-conscious interval.",
+    });
+  }
+
+  if (!Number.isFinite(publishIntervalMs) || publishIntervalMs < 120_000) {
+    results.push({
+      name: "REAP_PUBLISH_STATUS_INTERVAL_MS",
+      severity: "error",
+      message: "REAP_PUBLISH_STATUS_INTERVAL_MS must be at least 120000 for the low-command profile.",
+    });
+  }
+
+  if (!Number.isFinite(publishTimeoutMs) || publishTimeoutMs < 7_200_000) {
+    results.push({
+      name: "REAP_PUBLISH_STATUS_TIMEOUT_MS",
+      severity: "error",
+      message: "REAP_PUBLISH_STATUS_TIMEOUT_MS must cover at least two hours.",
+    });
+  }
+
+  if (!Number.isInteger(plannedVideos) || plannedVideos < 0) {
+    results.push({
+      name: "REDIS_PLANNED_VIDEOS_PER_MONTH",
+      severity: "error",
+      message: "REDIS_PLANNED_VIDEOS_PER_MONTH must be a non-negative integer.",
+    });
+  }
+
+  if (!Number.isInteger(plannedPublishes) || plannedPublishes < 0) {
+    results.push({
+      name: "REDIS_PLANNED_PUBLISHES_PER_MONTH",
+      severity: "error",
+      message: "REDIS_PLANNED_PUBLISHES_PER_MONTH must be a non-negative integer.",
+    });
+  }
+
+  if (
+    Number.isFinite(drainDelaySeconds) &&
+    drainDelaySeconds > 0 &&
+    Number.isFinite(stalledIntervalMs) &&
+    stalledIntervalMs > 0 &&
+    Number.isFinite(monthlyQuota) &&
+    monthlyQuota > 0 &&
+    Number.isInteger(plannedVideos) &&
+    plannedVideos >= 0 &&
+    Number.isInteger(plannedPublishes) &&
+    plannedPublishes >= 0
+  ) {
+    const budget = estimateRedisCommandBudget({
+      monthlyQuota,
+      plannedVideos,
+      plannedPublishes,
+      drainDelaySeconds,
+      stalledIntervalMs,
+      reapPollingInitialDelayMs: reapInitialDelayMs,
+      reapPollingTimeoutMs: reapTimeoutMs,
+      publishStatusTimeoutMs: publishTimeoutMs,
+    });
+    const ratio = budget.modeledKnownCycles / monthlyQuota;
+
+    results.push({
+      name: "Redis monthly command budget",
+      severity: ratio <= 0.5 ? "ok" : "warning",
+      message: `Modeled BullMQ maintenance and delayed-wait cycles use ${budget.modeledKnownCycles.toLocaleString("en-US")} commands per 30 days (${Math.round(ratio * 100)}% of quota) for ${plannedVideos} videos and ${plannedPublishes} publishes, before job lifecycle traffic and monitoring.`,
     });
   }
 }
@@ -490,6 +595,7 @@ export function validateProductionEnv(env: Env = process.env): ProductionCheckRe
   validateWebhook(env, results);
   validateProductionRateLimit(env, results);
   validatePollingFallback(env, results);
+  validateRedisCommandBudget(env, results);
 
   for (const name of [
     "REAP_WORKER_CONCURRENCY",
@@ -500,6 +606,11 @@ export function validateProductionEnv(env: Env = process.env): ProductionCheckRe
     "REAP_POLLING_INITIAL_DELAY_MS",
     "REAP_POLL_INTERVAL_MS",
     "REAP_POLL_TIMEOUT_MS",
+    "REAP_PUBLISH_STATUS_INTERVAL_MS",
+    "REAP_PUBLISH_STATUS_TIMEOUT_MS",
+    "BULLMQ_DRAIN_DELAY_SECONDS",
+    "BULLMQ_STALLED_INTERVAL_MS",
+    "REDIS_MONTHLY_COMMAND_QUOTA",
   ]) {
     validatePositiveInteger(env, name, results);
   }

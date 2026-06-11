@@ -2,11 +2,12 @@ import { Worker } from "bullmq";
 import { createJobLogger, logEvent, serializeError } from "@/lib/observability/logger";
 import { prisma } from "@/lib/prisma";
 import {
-  REAP_PUBLISH_STATUS_MAX_ATTEMPTS,
   REAP_PUBLISH_STATUS_QUEUE_NAME,
+  getReapPublishStatusConfig,
   type ReapPublishStatusJobData,
 } from "@/lib/queue/reap-publish-status-queue";
 import { createWorkerRedisConnection } from "@/lib/queue/redis";
+import { getBullMqWorkerMaintenanceOptions } from "@/lib/queue/worker-options";
 import { getPostDetails } from "@/lib/reap";
 import {
   isReapPostPending,
@@ -137,6 +138,7 @@ export function startReapPublishStatusWorker(concurrency = 1) {
   const worker = new Worker<ReapPublishStatusJobData>(REAP_PUBLISH_STATUS_QUEUE_NAME, processReapPublishStatusJob, {
     connection: createWorkerRedisConnection("ai-video-clipper-reap-publish-status-worker"),
     concurrency,
+    ...getBullMqWorkerMaintenanceOptions(),
   });
 
   worker.on("completed", async (job) => {
@@ -157,7 +159,7 @@ export function startReapPublishStatusWorker(concurrency = 1) {
 
   worker.on("failed", async (job, err) => {
     if (!job) return;
-    const willRetry = job.attemptsMade < (job.opts.attempts ?? REAP_PUBLISH_STATUS_MAX_ATTEMPTS);
+    const willRetry = job.attemptsMade < (job.opts.attempts ?? getReapPublishStatusConfig().maxAttempts);
     const errorMessage = err instanceof Error ? err.message : "Reap publish status polling job failed.";
 
     if (!willRetry) {

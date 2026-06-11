@@ -311,9 +311,16 @@ REAP_DEFAULT_CAPTIONS_PRESET=system_beasty  # caption preset ID
 REAP_DEFAULT_ENABLE_EMOJIS=true
 REAP_DEFAULT_ENABLE_HIGHLIGHTS=true
 REAP_DEFAULT_LANGUAGE=en
-REAP_POLLING_INITIAL_DELAY_MS=300000         # wait 5 minutes for webhook
-REAP_POLL_INTERVAL_MS=60000                  # 60 seconds between fallback checks
+REAP_POLLING_INITIAL_DELAY_MS=900000         # wait 15 minutes for webhook
+REAP_POLL_INTERVAL_MS=300000                 # 5 minutes between fallback checks
 REAP_POLL_TIMEOUT_MS=7200000                 # 2 hour fallback window
+REAP_PUBLISH_STATUS_INTERVAL_MS=120000       # 2 minutes between publish checks
+REAP_PUBLISH_STATUS_TIMEOUT_MS=7200000       # 2 hour publish window
+BULLMQ_DRAIN_DELAY_SECONDS=300               # reduce idle Upstash commands
+BULLMQ_STALLED_INTERVAL_MS=300000            # retain stalled recovery
+REDIS_MONTHLY_COMMAND_QUOTA=500000
+REDIS_PLANNED_VIDEOS_PER_MONTH=100
+REDIS_PLANNED_PUBLISHES_PER_MONTH=100
 
 # Reap Upload
 REAP_MAX_SOURCE_VIDEO_UPLOAD_MB=500         # max upload size in MB

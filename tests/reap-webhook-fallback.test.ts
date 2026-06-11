@@ -21,7 +21,7 @@ test("uses stable distinct identities for polling and clip download jobs", () =>
   assert.match(downloadId, /^[0-9a-f-]{36}$/);
 });
 
-test("defaults polling fallback to five minutes, sixty seconds, and two hours", () => {
+test("defaults polling fallback to fifteen minutes, five minutes, and two hours", () => {
   const previousValues = {
     initialDelay: process.env.REAP_POLLING_INITIAL_DELAY_MS,
     interval: process.env.REAP_POLL_INTERVAL_MS,
@@ -34,10 +34,10 @@ test("defaults polling fallback to five minutes, sixty seconds, and two hours", 
 
   try {
     assert.deepEqual(getReapPollingConfig(), {
-      initialDelayMs: 300_000,
-      intervalMs: 60_000,
+      initialDelayMs: 900_000,
+      intervalMs: 300_000,
       timeoutMs: 7_200_000,
-      maxAttempts: 120,
+      maxAttempts: 24,
     });
   } finally {
     if (previousValues.initialDelay === undefined) delete process.env.REAP_POLLING_INITIAL_DELAY_MS;

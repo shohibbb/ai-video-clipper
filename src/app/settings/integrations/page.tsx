@@ -86,7 +86,7 @@ export default async function IntegrationsPage() {
           <p className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#c6c9ab]">Setup Required</p>
           <h2 className="mt-4 font-[family-name:var(--font-display)] text-3xl font-black tracking-[-0.04em] text-white">Reap Webhook</h2>
           <p className="mt-4 leading-7 text-[#c6c9ab]">
-            Webhooks are the primary completion signal. A delayed polling fallback starts after five minutes only when the webhook has not already queued clip download work.
+            Webhooks are the primary completion signal. A quota-conscious polling fallback starts after fifteen minutes and checks every five minutes only when the webhook has not already queued clip download work.
           </p>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-3">

@@ -143,3 +143,32 @@ test("rejects aggressive Reap polling fallback timing", () => {
   assert.ok(errors.some((error) => error.name === "REAP_POLL_INTERVAL_MS"));
   assert.ok(errors.some((error) => error.name === "REAP_POLL_TIMEOUT_MS"));
 });
+
+test("rejects Redis settings that exceed the low-command maintenance profile", () => {
+  const errors = errorsFor({
+    ...validEnv,
+    BULLMQ_DRAIN_DELAY_SECONDS: "30",
+    BULLMQ_STALLED_INTERVAL_MS: "30000",
+    REAP_PUBLISH_STATUS_INTERVAL_MS: "30000",
+  });
+
+  assert.ok(errors.some((error) => error.name === "BULLMQ_DRAIN_DELAY_SECONDS"));
+  assert.ok(errors.some((error) => error.name === "BULLMQ_STALLED_INTERVAL_MS"));
+  assert.ok(errors.some((error) => error.name === "REAP_PUBLISH_STATUS_INTERVAL_MS"));
+});
+
+test("warns when planned queue traffic consumes too much of the Redis quota", () => {
+  const results = validateProductionEnv({
+    ...validEnv,
+    REDIS_PLANNED_VIDEOS_PER_MONTH: "500",
+    REDIS_PLANNED_PUBLISHES_PER_MONTH: "500",
+  });
+
+  assert.ok(
+    results.some(
+      (result) =>
+        result.name === "Redis monthly command budget" &&
+        result.severity === "warning",
+    ),
+  );
+});

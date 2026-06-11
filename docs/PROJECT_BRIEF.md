@@ -441,7 +441,7 @@ Mengunggah video ke Reap dan membuat project clipping.
 4. Jika source file: upload file ke Reap → create clips project.
 5. Simpan reapProjectId ke database.
 6. Update video status = processing_in_reap.
-7. Worker menjadwalkan polling fallback dengan delay 5 menit.
+7. Worker menjadwalkan polling fallback dengan delay 15 menit.
 8. Webhook menjadi jalur utama; polling menangani webhook yang terlewat.
 ```
 
@@ -470,9 +470,9 @@ Update video status = ready_to_upload
 ```text
 Reap Polling Worker ambil job dari queue
   ↓
-Tunggu 5 menit agar webhook menjadi jalur utama
+Tunggu 15 menit agar webhook menjadi jalur utama
   ↓
-Poll Reap project status setiap 60 detik
+Poll Reap project status setiap 5 menit
   ↓
 Jika completed: enqueue job download clip yang sama
   ↓
@@ -1022,9 +1022,9 @@ GET /api/reap/integrations
 
 #### Polling Configuration
 
-* Initial delay: 5 minutes
-* Poll interval: 60 seconds
-* Max attempts: 120 (~2 hours)
+* Initial delay: 15 minutes
+* Poll interval: 5 minutes
+* Max attempts: 24 (~2 hours)
 * Clip download retry: 3
 
 ---

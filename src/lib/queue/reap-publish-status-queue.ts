@@ -6,9 +6,23 @@ import { createQueueRedisConnection } from "@/lib/queue/redis";
 
 export const REAP_PUBLISH_STATUS_QUEUE_NAME = "reap-publish-status";
 export const REAP_PUBLISH_STATUS_JOB_NAME = "poll-reap-post";
-export const REAP_PUBLISH_STATUS_MAX_ATTEMPTS = 120;
-export const REAP_PUBLISH_STATUS_INTERVAL_MS = 30_000;
 export const DEFAULT_REAP_PUBLISH_STATUS_CONCURRENCY = 1;
+
+function getPositiveIntegerEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+export function getReapPublishStatusConfig() {
+  const intervalMs = getPositiveIntegerEnv("REAP_PUBLISH_STATUS_INTERVAL_MS", 120_000);
+  const timeoutMs = getPositiveIntegerEnv("REAP_PUBLISH_STATUS_TIMEOUT_MS", 7_200_000);
+
+  return {
+    intervalMs,
+    timeoutMs,
+    maxAttempts: Math.max(1, Math.ceil(timeoutMs / intervalMs)),
+  };
+}
 
 export type ReapPublishStatusJobData = {
   dbJobId: string;
@@ -25,26 +39,30 @@ type ReapPublishStatusJobInput = {
   reapPostId: string;
 };
 
-const reapPublishStatusJobOptions = {
-  attempts: REAP_PUBLISH_STATUS_MAX_ATTEMPTS,
-  backoff: {
-    type: "fixed" as const,
-    delay: REAP_PUBLISH_STATUS_INTERVAL_MS,
-  },
-  removeOnComplete: {
-    count: 1000,
-  },
-  removeOnFail: {
-    count: 1000,
-  },
-} satisfies JobsOptions;
+function getReapPublishStatusJobOptions() {
+  const config = getReapPublishStatusConfig();
+
+  return {
+    attempts: config.maxAttempts,
+    backoff: {
+      type: "fixed" as const,
+      delay: config.intervalMs,
+    },
+    removeOnComplete: {
+      count: 1000,
+    },
+    removeOnFail: {
+      count: 1000,
+    },
+  } satisfies JobsOptions;
+}
 
 let reapPublishStatusQueue: Queue<ReapPublishStatusJobData> | null = null;
 
 export function getReapPublishStatusQueue() {
   reapPublishStatusQueue ??= new Queue<ReapPublishStatusJobData>(REAP_PUBLISH_STATUS_QUEUE_NAME, {
     connection: createQueueRedisConnection("ai-video-clipper-reap-publish-status-queue"),
-    defaultJobOptions: reapPublishStatusJobOptions,
+    defaultJobOptions: getReapPublishStatusJobOptions(),
   });
 
   return reapPublishStatusQueue;
@@ -56,13 +74,14 @@ export async function enqueueReapPublishStatusJob({
   uploadTargetId,
   reapPostId,
 }: ReapPublishStatusJobInput) {
+  const config = getReapPublishStatusConfig();
   const dbJob = await prisma.job.create({
     data: {
       userId,
       clipId,
       jobType: "reap_publish_status",
       status: "queued",
-      maxAttempts: REAP_PUBLISH_STATUS_MAX_ATTEMPTS,
+      maxAttempts: config.maxAttempts,
     },
   });
 
@@ -87,7 +106,7 @@ export async function enqueueReapPublishStatusJob({
         reapPostId,
       },
       {
-        ...reapPublishStatusJobOptions,
+        ...getReapPublishStatusJobOptions(),
         jobId: dbJob.id,
       },
     );
@@ -105,8 +124,9 @@ export async function enqueueReapPublishStatusJob({
         clipId,
         uploadTargetId,
         reapPostId,
-        pollIntervalMs: REAP_PUBLISH_STATUS_INTERVAL_MS,
-        maxAttempts: REAP_PUBLISH_STATUS_MAX_ATTEMPTS,
+        pollIntervalMs: config.intervalMs,
+        maxAttempts: config.maxAttempts,
+        timeoutMs: config.timeoutMs,
       },
     });
 
