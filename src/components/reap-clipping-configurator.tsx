@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
+import { CaptionPresetPreview } from "@/components/caption-preset-preview";
 import type { ReapClippingConfig } from "@/lib/reap/clipping-config";
 
 type ReapPreset = {
@@ -96,30 +98,48 @@ function PresetCard({
   preset,
   selected,
   onSelect,
+  compact = false,
+  radio = false,
 }: {
   preset: ReapPreset;
   selected: boolean;
   onSelect: () => void;
+  compact?: boolean;
+  radio?: boolean;
 }) {
+  const captionsDisabled = preset.id === "__none";
+
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`grid overflow-hidden rounded-xl border text-left transition hover:-translate-y-0.5 ${
+      role={radio ? "radio" : undefined}
+      aria-checked={radio ? selected : undefined}
+      aria-pressed={radio ? undefined : selected}
+      aria-label={`${preset.name}${selected ? ", selected" : ""}`}
+      className={`group relative grid min-w-0 overflow-hidden rounded-lg border text-left transition duration-200 hover:-translate-y-0.5 hover:border-[rgba(223,254,0,0.42)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#dffe00] focus-visible:ring-offset-2 focus-visible:ring-offset-[#161514] ${
         selected
-          ? "border-[#dffe00] bg-[rgba(223,254,0,0.08)]"
-          : "border-[rgba(223,254,0,0.14)] bg-[rgba(30,32,32,0.70)]"
+          ? "border-[#18a7ff] bg-[rgba(24,167,255,0.08)] shadow-[0_0_0_1px_rgba(24,167,255,0.28)]"
+          : "border-[rgba(255,255,255,0.12)] bg-[#202120]"
       }`}
     >
-      <div className="grid h-20 place-items-center bg-[#2c2d2b] px-3 text-center">
-        <span className="max-w-full text-balance font-[family-name:var(--font-display)] text-lg font-black tracking-[-0.04em] text-white">
-          {preset.name}
-        </span>
+      <div className={compact ? "h-24" : "h-[7.25rem]"}>
+        <CaptionPresetPreview
+          presetId={preset.id}
+          presetName={preset.name}
+          disabled={captionsDisabled}
+        />
       </div>
-      <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-3">
-        <span className="truncate text-sm font-black text-[#e2e2e1]">{preset.name}</span>
-        <span className="font-[family-name:var(--font-mono)] text-[10px] font-bold uppercase tracking-[0.16em] text-[#909378]">
-          {preset.source}
+      <div className="flex min-h-12 items-center justify-between gap-3 border-t border-white/5 bg-[#171817] px-3 py-2.5">
+        <span className="truncate text-sm font-bold text-white">{preset.name}</span>
+        <span
+          className={`h-2.5 w-2.5 shrink-0 rounded-full border ${
+            selected
+              ? "border-[#18a7ff] bg-[#18a7ff] shadow-[0_0_0_3px_rgba(24,167,255,0.15)]"
+              : "border-[#686a65] bg-transparent group-hover:border-[#dffe00]"
+          }`}
+          aria-hidden="true"
+        >
         </span>
       </div>
     </button>
@@ -138,6 +158,10 @@ export function ReapClippingConfigurator({
   const [config, setConfig] = useState<ReapClippingConfig>(initialConfig);
   const [presets, setPresets] = useState<ReapPreset[]>([]);
   const [showAllPresets, setShowAllPresets] = useState(false);
+  const [modalPresetId, setModalPresetId] = useState<string | null>(
+    initialConfig.captionsPreset,
+  );
+  const [presetsLoading, setPresetsLoading] = useState(true);
   const [presetError, setPresetError] = useState("");
   const [topicsInput, setTopicsInput] = useState(initialConfig.topics.join(", "));
   const [error, setError] = useState("");
@@ -149,20 +173,31 @@ export function ReapClippingConfigurator({
     let cancelled = false;
 
     async function loadPresets() {
-      const response = await fetch("/api/reap/presets");
-      const result = (await response.json().catch(() => ({}))) as PresetsResponse;
+      try {
+        const response = await fetch("/api/reap/presets");
+        const result = (await response.json().catch(() => ({}))) as PresetsResponse;
 
-      if (cancelled) {
-        return;
+        if (cancelled) {
+          return;
+        }
+
+        if (!response.ok || !result.data) {
+          setPresetError(result.error || "Unable to load Reap presets.");
+          setPresets([]);
+          return;
+        }
+
+        setPresets(result.data);
+      } catch {
+        if (!cancelled) {
+          setPresetError("Unable to load Reap presets.");
+          setPresets([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setPresetsLoading(false);
+        }
       }
-
-      if (!response.ok || !result.data) {
-        setPresetError(result.error || "Unable to load Reap presets.");
-        setPresets([]);
-        return;
-      }
-
-      setPresets(result.data);
     }
 
     void loadPresets();
@@ -172,7 +207,28 @@ export function ReapClippingConfigurator({
     };
   }, []);
 
-  const visiblePresets = useMemo(() => {
+  useEffect(() => {
+    if (!showAllPresets) {
+      return;
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setShowAllPresets(false);
+      }
+    }
+
+    document.addEventListener("keydown", closeOnEscape);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showAllPresets]);
+
+  const allPresetOptions = useMemo(() => {
     const noCaptionsPreset: ReapPreset = {
       id: "__none",
       name: "No captions",
@@ -185,8 +241,24 @@ export function ReapClippingConfigurator({
         ? [{ id: config.captionsPreset, name: config.captionsPreset, source: "system" as const, preferences: {} }]
         : [];
 
-    return [noCaptionsPreset, ...fallbackPreset, ...presets].slice(0, 5);
+    return [noCaptionsPreset, ...fallbackPreset, ...presets];
   }, [config.captionsPreset, presets]);
+
+  const visiblePresets = useMemo(() => {
+    const noCaptions = allPresetOptions[0];
+    const selected = allPresetOptions.find(
+      (preset) => preset.id === config.captionsPreset,
+    );
+    const remaining = allPresetOptions.filter(
+      (preset) =>
+        preset.id !== "__none" &&
+        preset.id !== selected?.id,
+    );
+
+    return selected
+      ? [selected, noCaptions, ...remaining].slice(0, 5)
+      : [noCaptions, ...remaining].slice(0, 5);
+  }, [allPresetOptions, config.captionsPreset]);
 
   function updateConfig(patch: Partial<ReapClippingConfig>) {
     setConfig((current) => ({ ...current, ...patch }));
@@ -267,10 +339,22 @@ export function ReapClippingConfigurator({
   }
 
   const busy = isSubmitting || isPending;
-  const allPresetOptions: ReapPreset[] = [
-    { id: "__none", name: "No captions", source: "system", preferences: {} },
-    ...presets,
-  ];
+  const selectedModalPreset =
+    allPresetOptions.find((preset) =>
+      preset.id === "__none"
+        ? modalPresetId === null
+        : modalPresetId === preset.id,
+    ) ?? allPresetOptions[0];
+
+  function openPresetModal() {
+    setModalPresetId(config.captionsPreset);
+    setShowAllPresets(true);
+  }
+
+  function applyModalPreset() {
+    selectPreset(selectedModalPreset.id);
+    setShowAllPresets(false);
+  }
 
   return (
     <section className="rounded-xl border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.40)] backdrop-blur-xl">
@@ -347,21 +431,34 @@ export function ReapClippingConfigurator({
             </p>
             <Toggle checked={config.captionsPreset !== null} onChange={(checked) => updateConfig({ captionsPreset: checked ? initialConfig.captionsPreset || "system_beasty" : null })} />
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-            {visiblePresets.map((preset) => (
-              <PresetCard
-                key={preset.id}
-                preset={preset}
-                selected={preset.id === "__none" ? config.captionsPreset === null : config.captionsPreset === preset.id}
-                onSelect={() => selectPreset(preset.id)}
-              />
-            ))}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {presetsLoading
+              ? Array.from({ length: 5 }, (_, index) => (
+                  <div
+                    key={index}
+                    className="h-[10.25rem] animate-pulse rounded-lg border border-white/10 bg-[#242524]"
+                  />
+                ))
+              : visiblePresets.map((preset) => (
+                  <PresetCard
+                    key={preset.id}
+                    preset={preset}
+                    selected={
+                      preset.id === "__none"
+                        ? config.captionsPreset === null
+                        : config.captionsPreset === preset.id
+                    }
+                    onSelect={() => selectPreset(preset.id)}
+                    compact
+                  />
+                ))}
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowAllPresets(true)}
-              className="inline-flex min-h-10 items-center justify-center rounded-full border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.14em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[#dffe00] hover:text-[#dffe00]"
+              onClick={openPresetModal}
+              disabled={presetsLoading}
+              className="inline-flex min-h-10 items-center justify-center rounded-full border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-5 font-[family-name:var(--font-mono)] text-xs font-bold uppercase tracking-[0.14em] text-[#c6c9ab] transition hover:-translate-y-0.5 hover:border-[#dffe00] hover:text-[#dffe00] disabled:cursor-wait disabled:opacity-50 disabled:hover:translate-y-0"
             >
               More styles
             </button>
@@ -466,33 +563,85 @@ export function ReapClippingConfigurator({
         {message ? <p className="rounded-lg border border-[#39ff14] bg-[rgba(57,255,20,0.10)] px-4 py-3 text-sm font-bold text-[#39ff14]">{message}</p> : null}
       </div>
 
-      {showAllPresets ? (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[82vh] w-full max-w-3xl overflow-hidden rounded-xl border border-[rgba(223,254,0,0.15)] bg-[#161514] shadow-[0_24px_80px_rgba(0,0,0,0.55)]">
-            <div className="flex items-center justify-between border-b border-[rgba(223,254,0,0.12)] p-5">
-              <h3 className="font-[family-name:var(--font-display)] text-2xl font-black tracking-[-0.04em] text-white">Caption styles</h3>
-              <button type="button" onClick={() => setShowAllPresets(false)} className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[rgba(223,254,0,0.14)] text-[#c6c9ab] hover:text-[#dffe00]">
-                x
-              </button>
-            </div>
-            <div className="max-h-[62vh] overflow-y-auto p-5">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {allPresetOptions.map((preset) => (
-                  <PresetCard
-                    key={preset.id}
-                    preset={preset}
-                    selected={preset.id === "__none" ? config.captionsPreset === null : config.captionsPreset === preset.id}
-                    onSelect={() => {
-                      selectPreset(preset.id);
-                      setShowAllPresets(false);
-                    }}
-                  />
-                ))}
+      {showAllPresets && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[80] grid place-items-center bg-black/80 p-3 backdrop-blur-sm sm:p-6"
+              onMouseDown={(event) => {
+                if (event.currentTarget === event.target) {
+                  setShowAllPresets(false);
+                }
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="caption-style-dialog-title"
+                className="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-white/15 bg-[#161716] shadow-[0_28px_90px_rgba(0,0,0,0.68)]"
+              >
+                <div className="flex items-center justify-between px-5 pt-5 sm:px-6 sm:pt-6">
+                  <h3
+                    id="caption-style-dialog-title"
+                    className="font-[family-name:var(--font-display)] text-xl font-black text-white sm:text-2xl"
+                  >
+                    Caption styles
+                  </h3>
+                  <button
+                    type="button"
+                    autoFocus
+                    aria-label="Close caption styles"
+                    onClick={() => setShowAllPresets(false)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 text-xl text-[#c6c9ab] transition hover:border-[#dffe00] hover:text-[#dffe00]"
+                  >
+                    x
+                  </button>
+                </div>
+                <div className="mx-5 mt-4 border-b border-white/15 sm:mx-6">
+                  <div className="w-32 border-b border-white pb-3 text-sm font-bold text-white">
+                    All styles
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+                  <div
+                    role="radiogroup"
+                    aria-label="Caption style"
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {allPresetOptions.map((preset) => (
+                      <PresetCard
+                        key={preset.id}
+                        preset={preset}
+                        selected={
+                          preset.id === "__none"
+                            ? modalPresetId === null
+                            : modalPresetId === preset.id
+                        }
+                        radio
+                        onSelect={() =>
+                          setModalPresetId(preset.id === "__none" ? null : preset.id)
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3 border-t border-white/10 bg-[#171817] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <p className="min-w-0 truncate text-sm text-[#aeb19a]">
+                    Selected:{" "}
+                    <span className="font-bold text-white">{selectedModalPreset.name}</span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={applyModalPreset}
+                    className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full bg-white px-6 text-sm font-bold text-[#111] transition hover:bg-[#dffe00]"
+                  >
+                    Select Style
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </section>
   );
 }
