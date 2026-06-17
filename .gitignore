@@ -40,3 +40,7 @@ pnpm-debug.log*
 Thumbs.db
 
 .vercel
+
+# simulation / local dev
+tmp_db/
+scripts/simulasi-multi-account.py
