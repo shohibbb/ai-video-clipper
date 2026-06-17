@@ -81,12 +81,31 @@ model User {
   videos        Video[]
   clips         Clip[]
   uploadTargets UploadTarget[]
+  socialAccounts SocialAccount[]
   jobs          Job[]
   logs          Log[]
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
 
   @@map("users")
+}
+
+model SocialAccount {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  platform      String
+  connectedId   String   @map("connected_id") @db.Text
+  igUserId      String   @map("ig_user_id") @db.Text
+  igUsername    String   @map("ig_username") @db.Text
+  alias         String?  @db.Text
+  isActive      Boolean  @default(true)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, connectedId])
+  @@index([userId])
+  @@map("social_accounts")
 }
 
 model Account {

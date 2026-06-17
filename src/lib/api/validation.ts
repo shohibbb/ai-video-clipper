@@ -23,7 +23,12 @@ export function normalizeHashtags(value: unknown) {
 }
 
 const allowedVideoExtensions = ["mp4", "mov", "webm"] as const;
-const allowedVideoMimeTypes = ["video/mp4", "video/quicktime", "video/webm", "video/mov"];
+const allowedVideoMimeTypes = [
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/mov",
+];
 const defaultMaxSourceVideoUploadMb = 50;
 
 export type AllowedVideoExtension = (typeof allowedVideoExtensions)[number];
@@ -33,7 +38,9 @@ export function getFileExtension(fileName: string) {
   return extension ?? "";
 }
 
-export function isAllowedVideoExtension(extension: string): extension is AllowedVideoExtension {
+export function isAllowedVideoExtension(
+  extension: string,
+): extension is AllowedVideoExtension {
   return allowedVideoExtensions.includes(extension as AllowedVideoExtension);
 }
 
@@ -41,7 +48,10 @@ export function isAllowedVideoFile(file: File) {
   return isAllowedVideoFileMetadata(file.name, file.type);
 }
 
-export function isAllowedVideoFileMetadata(fileName: string, contentType?: string | null) {
+export function isAllowedVideoFileMetadata(
+  fileName: string,
+  contentType?: string | null,
+) {
   const extension = getFileExtension(fileName);
 
   if (!isAllowedVideoExtension(extension)) {
@@ -56,8 +66,11 @@ export function getAllowedVideoFileTypesLabel() {
 }
 
 export function getMaxSourceVideoUploadBytes() {
-  const value = Number(process.env.MAX_SOURCE_VIDEO_UPLOAD_MB ?? defaultMaxSourceVideoUploadMb);
-  const maxMb = Number.isFinite(value) && value > 0 ? value : defaultMaxSourceVideoUploadMb;
+  const value = Number(
+    process.env.MAX_SOURCE_VIDEO_UPLOAD_MB ?? defaultMaxSourceVideoUploadMb,
+  );
+  const maxMb =
+    Number.isFinite(value) && value > 0 ? value : defaultMaxSourceVideoUploadMb;
 
   return maxMb * 1024 * 1024;
 }
@@ -133,12 +146,19 @@ export const updateClipMetadataRequestSchema = z
     caption: z.string().trim().max(2200).optional().nullable(),
     hashtags: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
   })
-  .refine((value) => value.title !== undefined || value.caption !== undefined || value.hashtags !== undefined, {
-    message: "At least one metadata field is required.",
-  });
+  .refine(
+    (value) =>
+      value.title !== undefined ||
+      value.caption !== undefined ||
+      value.hashtags !== undefined,
+    {
+      message: "At least one metadata field is required.",
+    },
+  );
 
-export const uploadClipRequestSchema = z.strictObject({
-  platform: z.literal("tiktok").optional().default("tiktok"),
+export const uploadClipRequestSchema = z.object({
+  platform: z.enum(["tiktok", "instagram"]).optional().default("tiktok"),
+  connectedAccountId: z.string().uuid().optional().nullable(),
 });
 
 export function formatZodError(error: z.ZodError) {

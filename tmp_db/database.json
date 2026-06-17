@@ -1,0 +1,90 @@
+{
+  "users": {
+    "alice@example.com": {
+      "id": "a9eaf478-f7e4-4a8f-9396-416485d2e1c7",
+      "email": "alice@example.com",
+      "name": "Alice",
+      "created_at": "2026-06-17T02:05:34.206492+00:00"
+    },
+    "bob@example.com": {
+      "id": "3c3e20b7-497e-40d7-956f-7f1f8a964f59",
+      "email": "bob@example.com",
+      "name": "Bob",
+      "created_at": "2026-06-17T02:05:34.218782+00:00"
+    },
+    "charlie@example.com": {
+      "id": "707166b3-6343-49bc-84b1-10eff25fbc10",
+      "email": "charlie@example.com",
+      "name": "Charlie",
+      "created_at": "2026-06-17T02:05:34.228368+00:00"
+    }
+  },
+  "social_accounts": [
+    {
+      "id": "d7822fcf-655f-426c-ad4d-f627a65d1ad0",
+      "user_id": "a9eaf478-f7e4-4a8f-9396-416485d2e1c7",
+      "platform": "instagram",
+      "connected_id": "composio_0b2bc258",
+      "ig_user_id": "1111111111",
+      "ig_username": "alice_personal",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.238015+00:00"
+    },
+    {
+      "id": "ecf84191-e93e-40df-8aa9-9b7b6f69010c",
+      "user_id": "a9eaf478-f7e4-4a8f-9396-416485d2e1c7",
+      "platform": "instagram",
+      "connected_id": "composio_0c1c9e01",
+      "ig_user_id": "2222222222",
+      "ig_username": "alice_business",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.247954+00:00"
+    },
+    {
+      "id": "7ee568e5-4184-4cad-bf91-b06088b2b70e",
+      "user_id": "3c3e20b7-497e-40d7-956f-7f1f8a964f59",
+      "platform": "instagram",
+      "connected_id": "composio_626ecc22",
+      "ig_user_id": "3333333333",
+      "ig_username": "bob_media",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.257690+00:00"
+    },
+    {
+      "id": "7600aac3-a81e-4ea7-b555-446d904c9f08",
+      "user_id": "707166b3-6343-49bc-84b1-10eff25fbc10",
+      "platform": "instagram",
+      "connected_id": "composio_d6921c73",
+      "ig_user_id": "4444444444",
+      "ig_username": "charlie_vlog",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.269503+00:00"
+    },
+    {
+      "id": "869626f8-346f-4cb9-a429-f53835b27c6f",
+      "user_id": "707166b3-6343-49bc-84b1-10eff25fbc10",
+      "platform": "instagram",
+      "connected_id": "composio_09612b42",
+      "ig_user_id": "5555555555",
+      "ig_username": "charlie_bisnis",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.277746+00:00"
+    },
+    {
+      "id": "b29b18aa-b305-4475-aca0-c8225c57e150",
+      "user_id": "707166b3-6343-49bc-84b1-10eff25fbc10",
+      "platform": "instagram",
+      "connected_id": "composio_4e28846e",
+      "ig_user_id": "6666666666",
+      "ig_username": "charlie_gaming",
+      "alias": null,
+      "is_active": true,
+      "created_at": "2026-06-17T02:05:34.288664+00:00"
+    }
+  ]
+}
