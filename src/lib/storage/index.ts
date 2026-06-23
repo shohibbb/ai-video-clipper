@@ -1,3 +1,4 @@
+import { CloudflareR2StorageAdapter } from "@/lib/storage/cloudflare-r2-storage-adapter";
 import { SupabaseStorageAdapter } from "@/lib/storage/supabase-storage-adapter";
 import type { StorageProvider, StorageService } from "@/lib/storage/types";
 
@@ -16,8 +17,8 @@ function requireEnv(name: string) {
 function getStorageProvider(): StorageProvider {
   const provider = process.env.STORAGE_PROVIDER ?? "supabase";
 
-  if (provider !== "supabase") {
-    throw new Error(`Unsupported STORAGE_PROVIDER "${provider}". Supabase is the only Phase 3 adapter.`);
+  if (provider !== "supabase" && provider !== "cloudflare-r2") {
+    throw new Error(`Unsupported STORAGE_PROVIDER "${provider}". Use "supabase" or "cloudflare-r2".`);
   }
 
   return provider;
@@ -36,6 +37,14 @@ export function getStorageService(): StorageService {
       serviceRoleKey: requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
       bucket: process.env.SUPABASE_STORAGE_BUCKET ?? "clips",
     });
+  } else if (provider === "cloudflare-r2") {
+    storageService = new CloudflareR2StorageAdapter({
+      accountId: requireEnv("CLOUDFLARE_R2_ACCOUNT_ID"),
+      accessKeyId: requireEnv("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+      secretAccessKey: requireEnv("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+      bucket: process.env.CLOUDFLARE_R2_BUCKET ?? "ai-video-clipper",
+      publicUrl: process.env.CLOUDFLARE_R2_PUBLIC_URL,
+    });
   }
 
   if (!storageService) {
@@ -47,6 +56,7 @@ export function getStorageService(): StorageService {
 
 export type {
   DownloadFileResult,
+  PublicUrlResult,
   SignedUploadUrlResult,
   SignedUrlResult,
   StorageService,

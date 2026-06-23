@@ -4,19 +4,24 @@ import { upsertSocialAccount } from "@/lib/composio/accounts";
 
 export const runtime = "nodejs";
 
-const COMPOSIO_BASE_URL = "https://backend.composio.dev";
+function getComposioBaseUrl(): string {
+  return process.env.COMPOSIO_BASE_URL ?? "https://backend.composio.dev";
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
-  const alias = searchParams.get("alias");
-  const code = searchParams.get("code");
-  const state = searchParams.get("state");
-  const connectedAccountId = searchParams.get("connected_account_id");
+  const connectionId = searchParams.get("connectionId");
 
   if (!userId) {
     return NextResponse.redirect(
       new URL("/videos?error=missing-user-id", request.url),
+    );
+  }
+
+  if (!connectionId) {
+    return NextResponse.redirect(
+      new URL("/videos?error=no-connection-id", request.url),
     );
   }
 
@@ -28,44 +33,39 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // If we have a connected_account_id, fetch the connection details
-    let finalConnectedId = connectedAccountId;
+    // Fetch connection details from Composio
+    const connResponse = await fetch(
+      `${getComposioBaseUrl()}/api/v3/connections/${connectionId}`,
+      {
+        headers: { "x-api-key": apiKey },
+      },
+    );
 
-    if (!finalConnectedId && code) {
-      // Try to exchange code for connection
-      const tokenResponse = await fetch(
-        `${COMPOSIO_BASE_URL}/api/v3/connections/exchange-token`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": apiKey,
-          },
-          body: JSON.stringify({
-            code,
-            toolkit: "instagram",
-            user_id: userId,
-          }),
-        },
-      );
-
-      if (tokenResponse.ok) {
-        const tokenData = (await tokenResponse.json()) as {
-          connected_account_id?: string;
-        };
-        finalConnectedId = tokenData.connected_account_id ?? null;
-      }
-    }
-
-    if (!finalConnectedId) {
+    if (!connResponse.ok) {
+      const text = await connResponse.text();
+      console.error("Composio get connection error:", text);
       return NextResponse.redirect(
-        new URL("/videos?error=no-connected-account", request.url),
+        new URL("/videos?error=connection-not-found", request.url),
       );
     }
 
-    // Fetch Instagram user info using Composio REST API
-    const igUserInfoResponse = await fetch(
-      `${COMPOSIO_BASE_URL}/api/v3/tools/execute/INSTAGRAM_GET_USER_INFO`,
+    const connData = (await connResponse.json()) as {
+      id?: string;
+      status?: string;
+      toolkit?: { slug?: string };
+    };
+
+    if (!connData.id) {
+      return NextResponse.redirect(
+        new URL("/videos?error=connection-not-active", request.url),
+      );
+    }
+
+    const connectedId = connData.id;
+
+    // Fetch Instagram user info
+    const igInfoResponse = await fetch(
+      `${getComposioBaseUrl()}/api/v3/tools/execute/INSTAGRAM_GET_USER_INFO`,
       {
         method: "POST",
         headers: {
@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
           "x-api-key": apiKey,
         },
         body: JSON.stringify({
-          arguments: { ig_user_id: "me" },
           user_id: userId,
+          arguments: {},
         }),
       },
     );
@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
     let igUserId = "";
     let igUsername = "";
 
-    if (igUserInfoResponse.ok) {
-      const igData = (await igUserInfoResponse.json()) as {
+    if (igInfoResponse.ok) {
+      const igData = (await igInfoResponse.json()) as {
         data?: { id?: string; username?: string };
       };
       igUserId = igData.data?.id ?? "";
@@ -94,13 +94,11 @@ export async function GET(request: NextRequest) {
     await upsertSocialAccount({
       userId,
       platform: "instagram",
-      connectedId: finalConnectedId,
+      connectedId,
       igUserId: igUserId || "unknown",
       igUsername: igUsername || "unknown",
-      alias: alias ?? undefined,
     });
 
-    // Redirect to success page
     return NextResponse.redirect(
       new URL("/videos?instagram=connected", request.url),
     );

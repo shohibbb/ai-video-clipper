@@ -69,19 +69,62 @@ export function InstagramAccountSelector({
 
       const data = await res.json();
 
-      if (data.redirectUrl) {
-        // Open Composio OAuth in new tab
-        window.open(data.redirectUrl, "_blank");
-
-        // Poll for new accounts after a delay
-        setTimeout(() => {
-          fetchAccounts();
-        }, 5000);
+      if (!data.redirectUrl) {
+        throw new Error("No redirect URL returned from connection flow");
       }
+
+      const popup = window.open(
+        data.redirectUrl,
+        "instagram-oauth",
+        "width=600,height=700",
+      );
+
+      if (!popup) {
+        throw new Error(
+          "Popup was blocked. Please allow popups and try again.",
+        );
+      }
+
+      setIsConnecting(false);
+
+      const checkPopup = setInterval(async () => {
+        if (popup.closed) {
+          clearInterval(checkPopup);
+          await syncAccount(data.entityId);
+        }
+      }, 1000);
     } catch (err: any) {
       setError(err.message || "Failed to connect account");
-    } finally {
       setIsConnecting(false);
+    }
+  }
+
+  async function syncAccount(entityId?: string) {
+    setError("");
+
+    try {
+      const res = await fetch("/api/composio/instagram/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityId }),
+      });
+
+      const data = await res.json();
+
+      if (data.status === "pending") {
+        setError(
+          "Authorization still pending. Please try again in a moment.",
+        );
+        return;
+      }
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Sync failed");
+      }
+
+      await fetchAccounts();
+    } catch (err: any) {
+      setError(err.message || "Failed to sync account");
     }
   }
 

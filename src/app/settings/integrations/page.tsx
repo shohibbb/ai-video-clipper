@@ -30,6 +30,7 @@ export default async function IntegrationsPage() {
   }
 
   const tiktokIntegration = reapIntegrations.find((i) => i.platform === "tiktok" && i.isActive);
+  const reapAppUrl = process.env.REAP_APP_URL ?? "https://reap.video";
 
   return (
     <AppShell
@@ -62,7 +63,7 @@ export default async function IntegrationsPage() {
           <p className="mt-4 leading-7 text-[#c6c9ab]">
             {tiktokIntegration
               ? `Connected as @${tiktokIntegration.username}. Clips can be published directly to TikTok.`
-              : "Connect your TikTok account at reap.video/settings/integrations to enable publishing."}
+              : `Connect your TikTok account at ${reapAppUrl}/settings/integrations to enable publishing.`}
           </p>
         </article>
 
@@ -97,7 +98,7 @@ export default async function IntegrationsPage() {
                 <li>Login ke ngrok: <code className="rounded bg-[rgba(223,254,0,0.10)] px-1 py-0.5 text-[#dffe00]">ngrok config add-authtoken YOUR_TOKEN</code></li>
                 <li>Jalankan tunnel: <code className="rounded bg-[rgba(223,254,0,0.10)] px-1 py-0.5 text-[#dffe00]">ngrok http 3000</code></li>
                 <li>Copy HTTPS URL (misal: <code className="rounded bg-[rgba(223,254,0,0.10)] px-1 py-0.5 text-[#dffe00]">https://xxxx.ngrok-free.app</code>)</li>
-                <li>Buka <a href="https://app.reap.video" target="_blank" rel="noopener noreferrer" className="text-[#dffe00] underline">app.reap.video</a> → Profile → Settings → Webhooks</li>
+                <li>Buka <a href={reapAppUrl} target="_blank" rel="noopener noreferrer" className="text-[#dffe00] underline">{reapAppUrl.replace("https://", "")}</a> → Profile → Settings → Webhooks</li>
                 <li>Tambahkan webhook URL: <code className="rounded bg-[rgba(223,254,0,0.10)] px-1 py-0.5 text-[#dffe00]">https://xxxx.ngrok-free.app/api/reap/webhook</code></li>
                 <li>Pastikan webhook aktif ✅</li>
               </ol>

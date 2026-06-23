@@ -1,4 +1,4 @@
-export type StorageProvider = "supabase";
+export type StorageProvider = "supabase" | "cloudflare-r2";
 
 export type UploadFileInput = {
   path: string;
@@ -32,6 +32,10 @@ export type SignedUploadUrlResult = {
   expiresInSeconds: number;
 };
 
+export type PublicUrlResult = {
+  publicUrl: string;
+};
+
 export interface StorageService {
   uploadFile(input: UploadFileInput): Promise<UploadFileResult>;
   downloadFile(path: string): Promise<DownloadFileResult>;
@@ -39,4 +43,5 @@ export interface StorageService {
   createSignedUploadUrl(path: string, options?: { upsert?: boolean }): Promise<SignedUploadUrlResult>;
   fileExists(path: string): Promise<boolean>;
   deleteFile(path: string): Promise<void>;
+  getPublicUrl(path: string): Promise<PublicUrlResult>;
 }

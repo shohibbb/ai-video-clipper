@@ -1,7 +1,5 @@
 import type { ComposioExecuteActionResponse } from "./types";
 
-const COMPOSIO_BASE_URL = "https://backend.composio.dev";
-
 function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) {
@@ -23,7 +21,7 @@ export class ComposioClient {
 
   constructor(config?: Partial<ComposioClientConfig>) {
     this.apiKey = config?.apiKey ?? requireEnv("COMPOSIO_API_KEY");
-    this.baseUrl = config?.baseUrl ?? COMPOSIO_BASE_URL;
+    this.baseUrl = config?.baseUrl ?? process.env.COMPOSIO_BASE_URL ?? "https://backend.composio.dev";
   }
 
   async executeAction(

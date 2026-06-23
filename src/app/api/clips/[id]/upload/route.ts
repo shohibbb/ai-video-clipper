@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { getClipForUser } from "@/lib/user-owned-records";
 import { uploadToInstagramReels } from "@/lib/composio";
 import { getSocialAccountById } from "@/lib/composio/accounts";
+import { getStorageService } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -20,13 +21,12 @@ type RouteContext = {
 };
 
 /**
- * Build a public URL for a clip stored in Supabase Storage.
- * The `clips` bucket is public, so no signed URL is needed.
- * Instagram requires a direct URL without query parameters.
+ * Build a public URL for a clip stored in the current storage provider.
+ * Uses the StorageService interface so it works with any provider.
  */
-function buildClipPublicUrl(storagePath: string): string {
-  const supabaseUrl = process.env.SUPABASE_URL ?? "";
-  return `${supabaseUrl}/storage/v1/object/public/clips/${storagePath}`;
+async function buildClipPublicUrl(storagePath: string): Promise<string> {
+  const { publicUrl } = await getStorageService().getPublicUrl(storagePath);
+  return publicUrl;
 }
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         throw new Error("Instagram user ID not found for this account.");
       }
 
-      const publicVideoUrl = buildClipPublicUrl(clip.storagePath);
+      const publicVideoUrl = await buildClipPublicUrl(clip.storagePath);
 
       // Build caption from clip metadata
       const clipCaptionParts: string[] = [];
