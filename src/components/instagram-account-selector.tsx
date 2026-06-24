@@ -11,13 +11,13 @@ type InstagramAccount = {
 };
 
 type InstagramAccountSelectorProps = {
-  selectedAccountId: string | null;
-  onSelect: (accountId: string | null) => void;
+  selectedAccountIds: string[];
+  onSelect: (accountIds: string[]) => void;
   clipId: string;
 };
 
 export function InstagramAccountSelector({
-  selectedAccountId,
+  selectedAccountIds,
   onSelect,
   clipId,
 }: InstagramAccountSelectorProps) {
@@ -39,11 +39,6 @@ export function InstagramAccountSelector({
       if (!res.ok) throw new Error("Failed to fetch accounts");
       const data = await res.json();
       setAccounts(data.accounts || []);
-
-      // Auto-select first account if none selected
-      if (!selectedAccountId && data.accounts?.length > 0) {
-        onSelect(data.accounts[0].id);
-      }
     } catch (err: any) {
       setError(err.message || "Failed to load accounts");
     } finally {
@@ -128,6 +123,14 @@ export function InstagramAccountSelector({
     }
   }
 
+  function toggleAccount(accountId: string) {
+    if (selectedAccountIds.includes(accountId)) {
+      onSelect(selectedAccountIds.filter((id) => id !== accountId));
+    } else {
+      onSelect([...selectedAccountIds, accountId]);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-[#c6c9ab]">
@@ -140,23 +143,29 @@ export function InstagramAccountSelector({
   return (
     <div className="grid gap-2">
       <label className="font-[family-name:var(--font-mono)] text-xs font-bold uppercase leading-4 tracking-[0.25em] text-[#dffe00]">
-        Instagram Account
+        Instagram Accounts
       </label>
 
       {accounts.length > 0 ? (
-        <select
-          title="Select Instagram account"
-          value={selectedAccountId || ""}
-          onChange={(e) => onSelect(e.target.value || null)}
-          className="min-h-10 w-full rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-3 py-2 text-sm text-[#e2e2e1] focus:border-[#dffe00] focus:outline-none"
-        >
+        <div className="grid gap-1">
           {accounts.map((acc) => (
-            <option key={acc.id} value={acc.id}>
-              @{acc.igUsername}
-              {acc.alias ? ` (${acc.alias})` : ""}
-            </option>
+            <label
+              key={acc.id}
+              className="flex cursor-pointer items-center gap-3 rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(30,32,32,0.70)] px-3 py-2 text-sm text-[#e2e2e1] transition hover:border-[rgba(223,254,0,0.40)]"
+            >
+              <input
+                type="checkbox"
+                checked={selectedAccountIds.includes(acc.id)}
+                onChange={() => toggleAccount(acc.id)}
+                className="h-4 w-4 accent-[#dffe00]"
+              />
+              <span>
+                @{acc.igUsername}
+                {acc.alias ? ` (${acc.alias})` : ""}
+              </span>
+            </label>
           ))}
-        </select>
+        </div>
       ) : (
         <p className="text-sm text-[#c6c9ab]">
           No Instagram accounts connected yet.

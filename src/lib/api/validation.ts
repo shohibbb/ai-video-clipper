@@ -158,7 +158,7 @@ export const updateClipMetadataRequestSchema = z
 
 export const uploadClipRequestSchema = z.object({
   platform: z.enum(["tiktok", "instagram"]).optional().default("tiktok"),
-  connectedAccountId: z.string().uuid().optional().nullable(),
+  connectedAccountIds: z.array(z.string().uuid()).optional().nullable(),
 });
 
 export function formatZodError(error: z.ZodError) {

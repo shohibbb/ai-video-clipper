@@ -118,124 +118,181 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     throw error;
   }
 
-  // --- Instagram: Direct upload via Composio ---
+  // --- Instagram: Direct upload via Composio (multi-account) ---
   if (platform === "instagram") {
-    try {
-      const connectedAccountId = parsed.data.connectedAccountId ?? undefined;
+    const accountIds = parsed.data.connectedAccountIds ?? [];
 
-      if (!connectedAccountId) {
-        return NextResponse.json(
-          { error: "Please select an Instagram account before uploading." },
-          { status: 400 },
-        );
-      }
-
-      const socialAccount = await getSocialAccountById(
-        connectedAccountId,
-        user.id,
+    if (accountIds.length === 0) {
+      // Delete the unused UploadTarget we created
+      await prisma.uploadTarget
+        .delete({ where: { id: uploadTarget.id } })
+        .catch(() => {});
+      return NextResponse.json(
+        { error: "Select at least one Instagram account before uploading." },
+        { status: 400 },
       );
+    }
 
-      if (!socialAccount) {
-        return NextResponse.json(
-          {
-            error:
-              "Instagram account not found. Connect your Instagram account first.",
-          },
-          { status: 400 },
-        );
-      }
+    // Fetch all requested social accounts (ownership-checked)
+    const socialAccounts = (
+      await Promise.all(
+        accountIds.map((id) => getSocialAccountById(id, user.id)),
+      )
+    ).filter(Boolean) as NonNullable<Awaited<ReturnType<typeof getSocialAccountById>>>[];
 
-      await prisma.uploadTarget.update({
-        where: { id: uploadTarget.id },
-        data: { uploadStatus: "uploading" },
-      });
-
-      await prisma.clip.update({
-        where: { id: clip.id },
-        data: { status: "uploading" },
-      });
-
-      const entityId = socialAccount.connectedId;
-      const igUserId = socialAccount.igUserId;
-
-      if (!igUserId) {
-        throw new Error("Instagram user ID not found for this account.");
-      }
-
-      const publicVideoUrl = await buildClipPublicUrl(clip.storagePath);
-
-      // Build caption from clip metadata
-      const clipCaptionParts: string[] = [];
-      if (clip.caption) clipCaptionParts.push(clip.caption);
-      if (clip.hashtags?.length) {
-        clipCaptionParts.push(
-          clip.hashtags
-            .map((t: string) => (t.startsWith("#") ? t : `#${t}`))
-            .join(" "),
-        );
-      }
-      const caption = clipCaptionParts.join("\n\n");
-
-      const result = await uploadToInstagramReels({
-        entityId,
-        igUserId,
-        videoUrl: publicVideoUrl,
-        caption,
-        shareToFeed: true,
-      });
-
-      if (!result.success) {
-        throw new Error(result.error ?? "Instagram upload failed.");
-      }
-
-      // Update records on success
-      await prisma.uploadTarget.update({
-        where: { id: uploadTarget.id },
-        data: {
-          uploadStatus: "completed",
-          uploadedUrl: `https://instagram.com/reel/${result.mediaId}`,
-          platformResponse: result,
-          errorMessage: null,
-        },
-      });
-
-      await prisma.clip.update({
-        where: { id: clip.id },
-        data: { status: "uploaded" },
-      });
-
+    if (socialAccounts.length === 0) {
+      await prisma.uploadTarget
+        .delete({ where: { id: uploadTarget.id } })
+        .catch(() => {});
       return NextResponse.json(
         {
-          uploadTargetId: uploadTarget.id,
-          status: "completed",
-          mediaId: result.mediaId,
-          containerId: result.containerId,
+          error:
+            "Instagram accounts not found. Connect your Instagram account first.",
         },
-        { status: 201 },
+        { status: 400 },
       );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Instagram upload failed.";
+    }
 
-      await prisma.uploadTarget
-        .update({
-          where: { id: uploadTarget.id },
+    const publicVideoUrl = await buildClipPublicUrl(clip.storagePath);
+
+    // Build caption from clip metadata
+    const clipCaptionParts: string[] = [];
+    if (clip.caption) clipCaptionParts.push(clip.caption);
+    if (clip.hashtags?.length) {
+      clipCaptionParts.push(
+        clip.hashtags
+          .map((t: string) => (t.startsWith("#") ? t : `#${t}`))
+          .join(" "),
+      );
+    }
+    const caption = clipCaptionParts.join("\n\n");
+
+    const results: Array<{
+      accountId: string;
+      igUsername: string;
+      uploadTargetId: string;
+      status: string;
+      mediaId?: string;
+      containerId?: string;
+      error?: string;
+    }> = [];
+
+    // Process accounts sequentially
+    for (const socialAccount of socialAccounts) {
+      const resultEntry: (typeof results)[number] = {
+        accountId: socialAccount.id,
+        igUsername: socialAccount.igUsername,
+        uploadTargetId: "",
+        status: "failed",
+      };
+
+      try {
+        // Create per-account UploadTarget
+        const target = await prisma.uploadTarget.create({
           data: {
-            uploadStatus: "failed",
-            errorMessage,
+            clipId: clip.id,
+            userId: user.id,
+            platform: "instagram",
+            socialAccountId: socialAccount.id,
+            uploadStatus: "queued",
           },
-        })
-        .catch(() => {});
+        });
+        resultEntry.uploadTargetId = target.id;
 
+        await prisma.uploadTarget.update({
+          where: { id: target.id },
+          data: { uploadStatus: "uploading" },
+        });
+
+        await prisma.clip.update({
+          where: { id: clip.id },
+          data: { status: "uploading" },
+        });
+
+        const entityId = socialAccount.connectedId;
+        const igUserId = socialAccount.igUserId;
+
+        if (!igUserId) {
+          throw new Error("Instagram user ID not found for this account.");
+        }
+
+        const igResult = await uploadToInstagramReels({
+          entityId,
+          igUserId,
+          videoUrl: publicVideoUrl,
+          caption,
+          shareToFeed: true,
+        });
+
+        if (!igResult.success) {
+          throw new Error(igResult.error ?? "Instagram upload failed.");
+        }
+
+        // Success for this account
+        await prisma.uploadTarget.update({
+          where: { id: target.id },
+          data: {
+            uploadStatus: "completed",
+            uploadedUrl: `https://instagram.com/reel/${igResult.mediaId}`,
+            platformResponse: igResult,
+            errorMessage: null,
+          },
+        });
+
+        resultEntry.status = "completed";
+        resultEntry.mediaId = igResult.mediaId;
+        resultEntry.containerId = igResult.containerId;
+
+        await prisma.clip.update({
+          where: { id: clip.id },
+          data: { status: "uploaded" },
+        });
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Instagram upload failed.";
+
+        if (resultEntry.uploadTargetId) {
+          await prisma.uploadTarget
+            .update({
+              where: { id: resultEntry.uploadTargetId },
+              data: {
+                uploadStatus: "failed",
+                errorMessage,
+              },
+            })
+            .catch(() => {});
+        }
+
+        resultEntry.error = errorMessage;
+      }
+
+      results.push(resultEntry);
+    }
+
+    // Clean up the initially-created UploadTarget (no longer needed)
+    await prisma.uploadTarget
+      .delete({ where: { id: uploadTarget.id } })
+      .catch(() => {});
+
+    const allFailed = results.every((r) => r.status === "failed");
+    const anySucceeded = results.some((r) => r.status === "completed");
+
+    if (allFailed) {
       await prisma.clip
         .update({
           where: { id: clip.id },
           data: { status: "ready_to_upload" },
         })
         .catch(() => {});
-
-      return NextResponse.json({ error: errorMessage }, { status: 503 });
+      return NextResponse.json({ results, error: "All uploads failed." }, { status: 503 });
     }
+
+    return NextResponse.json(
+      { results },
+      { status: anySucceeded ? 201 : 503 },
+    );
   }
 
   // --- TikTok: Queue via BullMQ / Reap ---

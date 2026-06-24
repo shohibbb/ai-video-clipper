@@ -20,6 +20,15 @@ type InstagramUploadPanelProps = {
   uploadTargets: UploadTargetSummary[];
 };
 
+type UploadResult = {
+  accountId: string;
+  igUsername: string;
+  uploadTargetId: string;
+  status: string;
+  mediaId?: string;
+  error?: string;
+};
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
@@ -37,9 +46,8 @@ export function InstagramUploadPanel({
   const [isUploading, setIsUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
-    null,
-  );
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([]);
+  const [results, setResults] = useState<UploadResult[]>([]);
 
   const latestInstagramUpload = uploadTargets.find(
     (target) => target.platform === "instagram",
@@ -51,7 +59,7 @@ export function InstagramUploadPanel({
 
   const busy = isPending || isUploading;
   const canUpload =
-    storagePath && !hasActiveUpload && !busy && selectedAccountId;
+    storagePath && !hasActiveUpload && !busy && selectedAccountIds.length > 0;
 
   const statusLabel = hasActiveUpload
     ? (latestInstagramUpload?.uploadStatus ?? "queued")
@@ -67,6 +75,7 @@ export function InstagramUploadPanel({
     setIsUploading(true);
     setMessage("");
     setError("");
+    setResults([]);
 
     try {
       const res = await fetch(`/api/clips/${clipId}/upload`, {
@@ -74,16 +83,18 @@ export function InstagramUploadPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           platform: "instagram",
-          connectedAccountId: selectedAccountId,
+          connectedAccountIds: selectedAccountIds,
         }),
       });
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to queue Instagram upload");
+      if (data.results) {
+        setResults(data.results);
       }
 
-      setMessage(data.message || "Upload queued successfully");
+      if (!res.ok) {
+        setError(data.error || "Failed to queue Instagram upload");
+      }
 
       startTransition(() => {
         router.refresh();
@@ -109,6 +120,31 @@ export function InstagramUploadPanel({
         <StatusBadge status={statusLabel} />
       </div>
 
+      {results.length > 0 ? (
+        <div className="grid gap-1">
+          {results.map((r) => (
+            <div
+              key={r.uploadTargetId}
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                r.status === "completed"
+                  ? "border-[rgba(223,254,0,0.30)] bg-[rgba(223,254,0,0.06)]"
+                  : "border-[#ffb4ab] bg-[rgba(255,180,171,0.10)]"
+              }`}
+            >
+              <span className="font-bold text-[#e2e2e1]">@{r.igUsername}</span>
+              {" — "}
+              {r.status === "completed" ? (
+                <span className="text-[#dffe00]">
+                  Uploaded ✓{r.mediaId ? ` (reel/${r.mediaId})` : ""}
+                </span>
+              ) : (
+                <span className="text-[#ffb4ab]">{r.error || "Failed"}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       {latestInstagramUpload ? (
         <div className="rounded-lg border border-[rgba(223,254,0,0.15)] bg-[rgba(22,21,20,0.84)] px-4 py-3 text-sm leading-6 text-[#c6c9ab]">
           <p>
@@ -117,16 +153,6 @@ export function InstagramUploadPanel({
               {formatDate(latestInstagramUpload.createdAt)}
             </span>
           </p>
-          {/* {latestInstagramUpload.uploadedUrl ? (
-            <a
-              href={latestInstagramUpload.uploadedUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-block font-black text-[#dffe00] underline decoration-2 underline-offset-4"
-            >
-              Open Instagram Reel
-            </a>
-          ) : null} */}
           {latestInstagramUpload.errorMessage ? (
             <p className="mt-1 font-bold text-[#ffb4ab] break-all whitespace-pre-wrap">
               {latestInstagramUpload.errorMessage}
@@ -142,10 +168,16 @@ export function InstagramUploadPanel({
       ) : null}
 
       <InstagramAccountSelector
-        selectedAccountId={selectedAccountId}
-        onSelect={setSelectedAccountId}
+        selectedAccountIds={selectedAccountIds}
+        onSelect={setSelectedAccountIds}
         clipId={clipId}
       />
+
+      {selectedAccountIds.length === 0 ? (
+        <p className="text-xs text-[#c6c9ab]">
+          Select at least one account above to enable upload.
+        </p>
+      ) : null}
 
       <button
         type="button"
@@ -169,7 +201,7 @@ export function InstagramUploadPanel({
           {message}
         </p>
       ) : null}
-      {error ? (
+      {error && results.length === 0 ? (
         <p className="rounded-lg border border-[#ffb4ab] bg-[rgba(255,180,171,0.10)] px-4 py-3 text-sm font-bold text-[#ffb4ab] break-all">
           {error}
         </p>
