@@ -46,5 +46,4 @@ tmp_db/
 scripts/simulasi-multi-account.py
 scripts/test-*.py
 scripts/discover-composio.py
-scripts/composio-connect.py
 .commandcode
