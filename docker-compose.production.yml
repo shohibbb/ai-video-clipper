@@ -68,19 +68,12 @@ services:
       - AWS_REGION=${AWS_REGION}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
       - S3_ENDPOINT=${S3_ENDPOINT}
-      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
-      - COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID=${COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - INSTAGRAM_ACCESS_TOKEN=${INSTAGRAM_ACCESS_TOKEN}
       - NEXT_PUBLIC_INSTAGRAM_ACCESS_TOKEN=${NEXT_PUBLIC_INSTAGRAM_ACCESS_TOKEN}
       - INSTAGRAM_USER_ID=${INSTAGRAM_USER_ID}
       - NEXT_PUBLIC_INSTAGRAM_USER_ID=${NEXT_PUBLIC_INSTAGRAM_USER_ID}
-
-networks:
-  dokploy-network:
-    name: dokploy-network
-    driver: bridge
 
   # ──────────────────────────────────────────────────────────────
   # Redis (internal only — no public port)
@@ -229,3 +222,8 @@ networks:
       - REDIS_URL=redis://redis:6379
       - REAP_API_KEY=${REAP_API_KEY}
       - REAP_BASE_URL=${REAP_BASE_URL}
+
+networks:
+  dokploy-network:
+    name: dokploy-network
+    driver: bridge
