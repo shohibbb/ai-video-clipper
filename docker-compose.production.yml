@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ──────────────────────────────────────────────────────────────
   # Migration runner (runs once at startup)
@@ -11,8 +9,6 @@ services:
       target: runner
     command: ["npm", "run", "prisma:deploy"]
     restart: "no"
-    networks:
-      - dokploy-network
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - DIRECT_URL=${DIRECT_URL}
@@ -28,15 +24,11 @@ services:
       args:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
     command: ["node", "server.js"]
-    ports:
-      - "3000:3000"
-    networks:
-      - dokploy-network
+    expose:
+      - "3000"
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -81,8 +73,6 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    networks:
-      - dokploy-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -98,13 +88,9 @@ services:
       dockerfile: Dockerfile
       target: worker-runner
     command: ["npm", "run", "worker:reap"]
-    networks:
-      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -129,13 +115,9 @@ services:
       dockerfile: Dockerfile
       target: worker-runner
     command: ["npm", "run", "worker:reap-polling"]
-    networks:
-      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -151,13 +133,9 @@ services:
       dockerfile: Dockerfile
       target: worker-runner
     command: ["npm", "run", "worker:reap-download"]
-    networks:
-      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -179,13 +157,9 @@ services:
       dockerfile: Dockerfile
       target: worker-runner
     command: ["npm", "run", "worker:reap-publish"]
-    networks:
-      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -207,13 +181,9 @@ services:
       dockerfile: Dockerfile
       target: worker-runner
     command: ["npm", "run", "worker:reap-publish-status"]
-    networks:
-      - dokploy-network
     depends_on:
       redis:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     restart: unless-stopped
     environment:
       - NODE_ENV=production
@@ -222,8 +192,3 @@ services:
       - REDIS_URL=redis://redis:6379
       - REAP_API_KEY=${REAP_API_KEY}
       - REAP_BASE_URL=${REAP_BASE_URL}
-
-networks:
-  dokploy-network:
-    name: dokploy-network
-    driver: bridge
