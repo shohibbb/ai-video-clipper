@@ -1,0 +1,218 @@
+version: "3.9"
+
+services:
+  # ──────────────────────────────────────────────────────────────
+  # Migration runner (runs once at startup)
+  # ──────────────────────────────────────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    command: ["npm", "run", "prisma:deploy"]
+    restart: "no"
+    networks:
+      - dokploy-network
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+
+  # ──────────────────────────────────────────────────────────────
+  # Next.js web application
+  # ──────────────────────────────────────────────────────────────
+  autoclipper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+      args:
+        - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    command: ["node", "server.js"]
+    ports:
+      - "3000:3000"
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - AUTH_GITHUB_ID=${AUTH_GITHUB_ID}
+      - AUTH_GITHUB_SECRET=${AUTH_GITHUB_SECRET}
+      - DEV_USER_ID=${DEV_USER_ID}
+      - DEV_USER_EMAIL=${DEV_USER_EMAIL}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER}
+      - CLOUDFLARE_R2_ACCOUNT_ID=${CLOUDFLARE_R2_ACCOUNT_ID}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET=${CLOUDFLARE_R2_BUCKET}
+      - CLOUDFLARE_R2_PUBLIC_URL=${CLOUDFLARE_R2_PUBLIC_URL}
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID=${COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID}
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}
+
+networks:
+  dokploy-network:
+    name: dokploy-network
+    driver: bridge
+      - REAP_WEBHOOK_SECRET=${REAP_WEBHOOK_SECRET}
+
+  # ──────────────────────────────────────────────────────────────
+  # Redis (internal only — no public port)
+  # ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - dokploy-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ──────────────────────────────────────────────────────────────
+  # Workers
+  # ──────────────────────────────────────────────────────────────
+  worker-reap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-runner
+    command: ["npm", "run", "worker:reap"]
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - COMPOSIO_API_KEY=${COMPOSIO_API_KEY}
+      - COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID=${COMPOSIO_INSTAGRAM_AUTH_CONFIG_ID}
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}
+      - REAP_WEBHOOK_SECRET=${REAP_WEBHOOK_SECRET}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER}
+      - CLOUDFLARE_R2_ACCOUNT_ID=${CLOUDFLARE_R2_ACCOUNT_ID}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET=${CLOUDFLARE_R2_BUCKET}
+      - CLOUDFLARE_R2_PUBLIC_URL=${CLOUDFLARE_R2_PUBLIC_URL}
+
+  worker-reap-polling:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-runner
+    command: ["npm", "run", "worker:reap-polling"]
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}
+
+  worker-reap-download:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-runner
+    command: ["npm", "run", "worker:reap-download"]
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER}
+      - CLOUDFLARE_R2_ACCOUNT_ID=${CLOUDFLARE_R2_ACCOUNT_ID}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET=${CLOUDFLARE_R2_BUCKET}
+      - CLOUDFLARE_R2_PUBLIC_URL=${CLOUDFLARE_R2_PUBLIC_URL}
+
+  worker-reap-publish:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-runner
+    command: ["npm", "run", "worker:reap-publish"]
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}
+      - STORAGE_PROVIDER=${STORAGE_PROVIDER}
+      - CLOUDFLARE_R2_ACCOUNT_ID=${CLOUDFLARE_R2_ACCOUNT_ID}
+      - CLOUDFLARE_R2_ACCESS_KEY_ID=${CLOUDFLARE_R2_ACCESS_KEY_ID}
+      - CLOUDFLARE_R2_SECRET_ACCESS_KEY=${CLOUDFLARE_R2_SECRET_ACCESS_KEY}
+      - CLOUDFLARE_R2_BUCKET=${CLOUDFLARE_R2_BUCKET}
+      - CLOUDFLARE_R2_PUBLIC_URL=${CLOUDFLARE_R2_PUBLIC_URL}
+
+  worker-reap-publish-status:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: worker-runner
+    command: ["npm", "run", "worker:reap-publish-status"]
+    networks:
+      - dokploy-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DIRECT_URL=${DIRECT_URL}
+      - REDIS_URL=redis://redis:6379
+      - REAP_API_KEY=${REAP_API_KEY}
+      - REAP_BASE_URL=${REAP_BASE_URL}

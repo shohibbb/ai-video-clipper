@@ -216,6 +216,7 @@ model UploadTarget {
   id                String       @id @default(uuid()) @db.Uuid
   clipId            String       @map("clip_id") @db.Uuid
   userId            String       @map("user_id") @db.Uuid
+  socialAccountId   String?      @map("social_account_id") @db.Uuid
   platform          String
   uploadStatus      UploadStatus @default(queued) @map("upload_status")
   uploadedUrl       String?      @map("uploaded_url")

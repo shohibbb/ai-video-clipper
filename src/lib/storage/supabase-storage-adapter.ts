@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type {
   DownloadFileResult,
+  PublicUrlResult,
   SignedUrlResult,
   SignedUploadUrlResult,
   StorageService,
@@ -111,5 +112,10 @@ export class SupabaseStorageAdapter implements StorageService {
     if (error) {
       throw new Error(`Supabase delete failed for ${path}: ${error.message}`);
     }
+  }
+
+  async getPublicUrl(path: string): Promise<PublicUrlResult> {
+    const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
+    return { publicUrl: data.publicUrl };
   }
 }

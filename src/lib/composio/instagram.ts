@@ -65,10 +65,21 @@ export async function uploadToInstagramReels(
     });
 
     child.on("close", (code: number | null) => {
+      // Try to parse error from stdout first (Python SDK errors are on stdout)
+      let parsedError: string | null = null;
+      try {
+        const parsed = JSON.parse(stdout.trim());
+        if (parsed && parsed.success === false && parsed.error) {
+          parsedError = parsed.error;
+        }
+      } catch {
+        // not JSON, ignore
+      }
+
       if (code !== 0) {
         resolve({
           success: false,
-          error: stderr.trim() || `Python script exited with code ${code}`,
+          error: parsedError || stderr.trim() || `Python script exited with code ${code}`,
         });
         return;
       }

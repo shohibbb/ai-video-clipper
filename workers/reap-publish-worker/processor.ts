@@ -130,8 +130,9 @@ export async function processReapPublishJob(job: Job<ClipUploadJobData>) {
         );
 
         if (!tiktokIntegration) {
+          const appUrl = process.env.REAP_APP_URL ?? "https://reap.video";
           throw new Error(
-            "No active TikTok integration found in Reap. Connect a TikTok account at https://reap.video/settings/integrations.",
+            `No active TikTok integration found in Reap. Connect a TikTok account at ${appUrl}/settings/integrations.`,
           );
         }
 
