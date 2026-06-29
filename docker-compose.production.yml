@@ -24,8 +24,8 @@ services:
       args:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
     command: ["node", "server.js"]
-    expose:
-      - "3000"
+    ports:
+      - "3000:3000"
     depends_on:
       redis:
         condition: service_healthy

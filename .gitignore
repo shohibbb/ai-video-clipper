@@ -44,3 +44,4 @@ Thumbs.db
 # simulation / local dev
 tmp_db/
 .commandcode
+DOKPLOY_DEPLOYMENT.md
