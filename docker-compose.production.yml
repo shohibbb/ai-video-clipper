@@ -65,7 +65,8 @@ services:
 
 networks:
   dokploy-network:
-    external: true
+    name: dokploy-network
+    driver: bridge
       - REAP_WEBHOOK_SECRET=${REAP_WEBHOOK_SECRET}
 
   # ──────────────────────────────────────────────────────────────
