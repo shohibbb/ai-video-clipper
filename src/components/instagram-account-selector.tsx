@@ -27,6 +27,7 @@ export function InstagramAccountSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAccounts();
@@ -123,6 +124,35 @@ export function InstagramAccountSelector({
     }
   }
 
+  async function disconnectAccount(accountId: string, username: string) {
+    if (!confirm(`Disconnect @${username} from Instagram?`)) return;
+
+    setDisconnectingId(accountId);
+    setError("");
+
+    try {
+      const res = await fetch(`/api/composio/instagram/accounts?id=${accountId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to disconnect account");
+      }
+
+      // Remove from selection if it was selected
+      if (selectedAccountIds.includes(accountId)) {
+        onSelect(selectedAccountIds.filter((id) => id !== accountId));
+      }
+
+      await fetchAccounts();
+    } catch (err: any) {
+      setError(err.message || "Failed to disconnect account");
+    } finally {
+      setDisconnectingId(null);
+    }
+  }
+
   function toggleAccount(accountId: string) {
     if (selectedAccountIds.includes(accountId)) {
       onSelect(selectedAccountIds.filter((id) => id !== accountId));
@@ -159,10 +189,21 @@ export function InstagramAccountSelector({
                 onChange={() => toggleAccount(acc.id)}
                 className="h-4 w-4 accent-[#dffe00]"
               />
-              <span>
+              <span className="flex-1">
                 @{acc.igUsername}
                 {acc.alias ? ` (${acc.alias})` : ""}
               </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  disconnectAccount(acc.id, acc.igUsername);
+                }}
+                disabled={disconnectingId === acc.id}
+                className="ml-auto text-xs text-[#ffb4ab] transition hover:text-[#ff8a82] disabled:opacity-50"
+              >
+                {disconnectingId === acc.id ? "..." : "Disconnect"}
+              </button>
             </label>
           ))}
         </div>
