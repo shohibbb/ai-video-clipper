@@ -6,8 +6,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates openssl \
+  && apt-get install -y --no-install-recommends ca-certificates openssl python3 python3-pip python3-venv \
   && rm -rf /var/lib/apt/lists/*
+
+# Install composio SDK for Instagram scripts
+RUN python3 -m venv /opt/venv \
+  && /opt/venv/bin/pip install composio-core
+
+ENV PATH="/opt/venv/bin:$PATH"
 
 FROM base AS deps
 
@@ -19,16 +25,14 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
 ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ai_video_clipper
 ENV DIRECT_URL=postgresql://postgres:postgres@localhost:5432/ai_video_clipper
 ENV REDIS_URL=redis://localhost:6379
-ENV NEXT_PUBLIC_APP_URL=http://localhost:3000
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
 ENV NEXTAUTH_SECRET=build_time_placeholder_secret
 ENV NEXTAUTH_URL=http://localhost:3000
-ENV STORAGE_PROVIDER=supabase
-ENV SUPABASE_URL=https://example.supabase.co
-ENV SUPABASE_SERVICE_ROLE_KEY=build_time_placeholder_service_role_key
-ENV SUPABASE_STORAGE_BUCKET=clips
+ENV STORAGE_PROVIDER=cloudflare-r2
 ENV REAP_API_KEY=build_time_placeholder_reap_key
 ENV REAP_BASE_URL=https://public.reap.video/api/v1/automation
 
