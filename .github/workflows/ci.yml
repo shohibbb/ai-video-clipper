@@ -54,14 +54,14 @@ jobs:
           ALLOW_DEV_AUTH: "false"
           AUTH_GITHUB_ID: ci-github-client-id
           AUTH_GITHUB_SECRET: ci-github-client-secret
-          DATABASE_URL: postgresql://clipper:clipper@db.example.com:5432/ai_video_clipper
-          REDIS_URL: rediss://redis.example.com:6379
-          STORAGE_PROVIDER: supabase
-          SUPABASE_URL: https://example.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ci_supabase_service_role_key_long_enough
-          SUPABASE_STORAGE_BUCKET: clips
-          REAP_API_KEY: ci_reap_api_key_long_enough
-          REAP_WEBHOOK_SECRET: ci_reap_webhook_secret_with_more_than_32_chars
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          STORAGE_PROVIDER: ${{ secrets.STORAGE_PROVIDER }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_STORAGE_BUCKET: ${{ secrets.SUPABASE_STORAGE_BUCKET }}
+          REAP_API_KEY: ${{ secrets.REAP_API_KEY }}
+          REAP_WEBHOOK_SECRET: ${{ secrets.REAP_WEBHOOK_SECRET }}
           REAP_WEBHOOK_REQUIRE_TIMESTAMP: "true"
           REAP_WEBHOOK_TOLERANCE_SECONDS: "300"
           REAP_RATE_LIMIT_MAX_REQUESTS: "10"
