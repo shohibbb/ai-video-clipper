@@ -1,7 +1,4 @@
 services:
-  # ──────────────────────────────────────────────────────────────
-  # Migration runner (runs once at startup)
-  # ──────────────────────────────────────────────────────────────
   migrate:
     build:
       context: .
@@ -13,9 +10,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - DIRECT_URL=${DIRECT_URL}
 
-  # ──────────────────────────────────────────────────────────────
-  # Next.js web application
-  # ──────────────────────────────────────────────────────────────
   autoclipper:
     build:
       context: .
@@ -25,7 +19,7 @@ services:
         - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
     command: ["node", "server.js"]
     ports:
-      - "3000:3000"
+      - "3000"
     depends_on:
       redis:
         condition: service_healthy
@@ -67,9 +61,6 @@ services:
       - INSTAGRAM_USER_ID=${INSTAGRAM_USER_ID}
       - NEXT_PUBLIC_INSTAGRAM_USER_ID=${NEXT_PUBLIC_INSTAGRAM_USER_ID}
 
-  # ──────────────────────────────────────────────────────────────
-  # Redis (internal only — no public port)
-  # ──────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -79,9 +70,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # ──────────────────────────────────────────────────────────────
-  # Workers
-  # ──────────────────────────────────────────────────────────────
   worker-reap:
     build:
       context: .
