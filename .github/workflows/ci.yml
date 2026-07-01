@@ -55,6 +55,7 @@ jobs:
           AUTH_GITHUB_ID: ci-github-client-id
           AUTH_GITHUB_SECRET: ci-github-client-secret
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
           STORAGE_PROVIDER: ${{ secrets.STORAGE_PROVIDER }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
