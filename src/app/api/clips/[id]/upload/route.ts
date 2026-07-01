@@ -8,7 +8,7 @@ import {
 import { enqueueClipUploadJob } from "@/lib/queue/upload-queue";
 import { prisma } from "@/lib/prisma";
 import { getClipForUser } from "@/lib/user-owned-records";
-import { uploadToInstagramReels } from "@/lib/composio";
+import { uploadInstagramReels } from "@/lib/composio";
 import { getSocialAccountById } from "@/lib/composio/accounts";
 import { getStorageService } from "@/lib/storage";
 
@@ -138,7 +138,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       await Promise.all(
         accountIds.map((id) => getSocialAccountById(id, user.id)),
       )
-    ).filter(Boolean) as NonNullable<Awaited<ReturnType<typeof getSocialAccountById>>>[];
+    ).filter(Boolean) as NonNullable<
+      Awaited<ReturnType<typeof getSocialAccountById>>
+    >[];
 
     if (socialAccounts.length === 0) {
       await prisma.uploadTarget
@@ -216,7 +218,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           throw new Error("Instagram user ID not found for this account.");
         }
 
-        const igResult = await uploadToInstagramReels({
+        const igResult = await uploadInstagramReels({
           entityId,
           igUserId,
           videoUrl: publicVideoUrl,
@@ -249,9 +251,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         });
       } catch (error) {
         const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Instagram upload failed.";
+          error instanceof Error ? error.message : "Instagram upload failed.";
 
         if (resultEntry.uploadTargetId) {
           await prisma.uploadTarget
@@ -286,13 +286,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           data: { status: "ready_to_upload" },
         })
         .catch(() => {});
-      return NextResponse.json({ results, error: "All uploads failed." }, { status: 503 });
+      return NextResponse.json(
+        { results, error: "All uploads failed." },
+        { status: 503 },
+      );
     }
 
-    return NextResponse.json(
-      { results },
-      { status: anySucceeded ? 201 : 503 },
-    );
+    return NextResponse.json({ results }, { status: anySucceeded ? 201 : 503 });
   }
 
   // --- TikTok: Queue via BullMQ / Reap ---

@@ -6,14 +6,8 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates openssl python3 python3-pip python3-venv \
+  && apt-get install -y --no-install-recommends ca-certificates openssl \
   && rm -rf /var/lib/apt/lists/*
-
-# Install composio SDK for Instagram scripts
-RUN python3 -m venv /opt/venv \
-  && /opt/venv/bin/pip install composio-core
-
-ENV PATH="/opt/venv/bin:$PATH"
 
 FROM base AS deps
 
